@@ -6,8 +6,10 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <opencv2/opencv.hpp>
 
 #include <vector>
+// #define CV_64FC3 CV_MAKETYPE(CV_64F, 3)
 
 struct color_point_t
 {
@@ -131,4 +133,31 @@ k4a_image_t downscale_image_2x2_binning(const k4a_image_t color_image)
     }
 
     return color_image_downscaled;
+}
+
+void tranformation_helpers_write_color_image_as_jpeg(const k4a_image_t color_image, const char *file_name)
+{
+    std::vector<color_point_t> points;
+
+    // int width = k4a_image_get_width_pixels(point_cloud_image);
+    int width = k4a_image_get_width_pixels(color_image);
+    int height = k4a_image_get_height_pixels(color_image);
+    // printf("k4a_image: w=%d, h=%d\n", width, height);
+
+    // Convert k4a_image_t to cv::Mat
+    cv::Mat image(height, width, CV_8UC3);
+    uint8_t *color_image_data = k4a_image_get_buffer(color_image);
+
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            int idx = i * width + j;
+            image.at<cv::Vec3b>(i, j)[0] = color_image_data[4 * idx + 0];
+            image.at<cv::Vec3b>(i, j)[1] = color_image_data[4 * idx + 1];
+            image.at<cv::Vec3b>(i, j)[2] = color_image_data[4 * idx + 2];
+        }
+    }
+
+    cv::imwrite(file_name, image);
 }
