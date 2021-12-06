@@ -4,8 +4,5 @@
 #pragma once
 #include <k4a/k4a.h>
 
-void tranformation_helpers_write_point_cloud(const k4a_image_t point_cloud_image,
-                                             const k4a_image_t color_image,
-                                             const char *file_name);
 void tranformation_helpers_write_color_image_as_jpeg(const k4a_image_t color_image, const char *file_name);
-k4a_image_t downscale_image_2x2_binning(const k4a_image_t color_image);
+void tranformation_helpers_write_depth_image(const k4a_image_t depth_image, const char *file_name);
