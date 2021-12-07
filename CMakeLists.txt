@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10.2)
 project(K4aFrameExtractor)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(libjpeg-turbo_DIR /opt/libjpeg-turbo/lib64/cmake/libjpeg-turbo)
 include_directories(/opt/libjpeg-turbo/include/)
 
@@ -25,4 +28,5 @@ target_link_libraries(transformation_example PRIVATE
     k4a::k4arecord
     /opt/libjpeg-turbo/lib64/libturbojpeg.so
     ${OpenCV_LIBS}
+    stdc++fs
     )

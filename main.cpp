@@ -6,8 +6,8 @@
 #include <string>
 #include "transformation_helpers.h"
 #include "turbojpeg.h"
-// #include <filesystem>
-#include <sys/stat.h>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 // static std::string get_output_filename_from_timestamp(std::string date, int ts)
 // {
@@ -108,6 +108,10 @@ static std::string get_output_path(std::string output_dir, std::string date, uin
     // directory
     std::string dir = output_dir + "/" + hour_str + "/" + min_str;
     // std::filesystem::create_directories(dir);
+    // bool result2 =
+    fs::create_directories(dir);
+    // printf("fs:crate:\n")
+
     std::string fname = date + "_" + hour_str + min_str + sec_str + ".jpg";
 
     printf("dir: %s\n", dir.c_str());
