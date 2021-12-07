@@ -7,10 +7,10 @@
 #include "transformation_helpers.h"
 #include "turbojpeg.h"
 
-static bool point_cloud_depth_to_color(k4a_transformation_t transformation_handle,
-                                       const k4a_image_t depth_image,
-                                       const k4a_image_t color_image,
-                                       std::string file_name)
+static bool write_k4a_images(k4a_transformation_t transformation_handle,
+                             const k4a_image_t depth_image,
+                             const k4a_image_t color_image,
+                             std::string output_dir)
 {
     // transform color image into depth camera geometry
     int color_image_width_pixels = k4a_image_get_width_pixels(color_image);
@@ -36,7 +36,15 @@ static bool point_cloud_depth_to_color(k4a_transformation_t transformation_handl
     // tranformation_helpers_write_color_image_as_jpeg(color_image, file_name.c_str());
     // tranformation_helpers_write_color_image_as_jpeg(transformed_depth_image, file_name.c_str());
     // tranformation_helpers_write_depth_image(transformed_depth_image, file_name.c_str());
-    tranformation_helpers_write_depth_image(depth_image, file_name.c_str());
+
+    // uint64_t ts_color = k4a_image_get_system_timestamp_nsec(color_image);
+    uint64_t ts_color = k4a_image_get_device_timestamp_usec(color_image);
+    printf("ts of color: %ld\n", ts_color);
+    uint64_t ts_depth = k4a_image_get_system_timestamp_nsec(depth_image);
+    printf("ts of depth: %ld\n", ts_depth);
+
+    std::string file_name_depth = output_dir + "/depth" + "/20211207_120000_000.jpeg";
+    tranformation_helpers_write_depth_image(depth_image, file_name_depth.c_str());
 
     printf("dtype(depth_img): %s\n", typeid(depth_image).name());
     printf("color_image[stride=%d, size=%ld] %ld\n",
@@ -54,7 +62,7 @@ static bool point_cloud_depth_to_color(k4a_transformation_t transformation_handl
 }
 
 // Timestamp in milliseconds. Defaults to 1 sec as the first couple frames don't contain color
-static int playback(char *input_path, int timestamp = 1000, std::string output_filename = "output.ply")
+static int playback(char *input_path, int timestamp = 1000, std::string output_filename = "outputs")
 {
     int returnCode = 1;
     k4a_playback_t playback = NULL;
@@ -166,7 +174,7 @@ static int playback(char *input_path, int timestamp = 1000, std::string output_f
     ///////////////////////////////
 
     // Compute color point cloud by warping depth image into color camera geometry
-    if (point_cloud_depth_to_color(transformation, depth_image, uncompressed_color_image, output_filename) == false)
+    if (write_k4a_images(transformation, depth_image, uncompressed_color_image, output_filename) == false)
     {
         printf("Failed to transform depth to color\n");
         goto Exit;

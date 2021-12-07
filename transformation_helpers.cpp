@@ -48,13 +48,8 @@ void tranformation_helpers_write_depth_image(const k4a_image_t depth_image, cons
             uint8_t val1 = depth_image_data[2 * idx];
             uint8_t val2 = depth_image_data[2 * idx + 1];
             uint16_t val3 = (uint16_t)val1 + (uint16_t)val2 * 256;
+            // BUGFIX: Where does 5000 come from?
             uint8_t val = ((float)val3 / 5000.0) * 256.;
-            // TODO: CLIP VALUES larger than 255.
-            // if (i == 100)
-            // {
-            //     printf("depth_image[%d, %d]= (%d, %d, %d, %lf)\n", i, j, val1, val2, val3, val);
-            // }
-
             image.at<uint8_t>(i, j) = val;
         }
     }
