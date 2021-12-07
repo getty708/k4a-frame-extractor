@@ -9,61 +9,11 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-// static std::string get_output_filename_from_timestamp(std::string date, int ts)
-// {
-//     int ts_msec, ts_sec, ts_min, ts_hour;
-//     std::string msec_str, sec_str, min_str, hour_str;
-
-//     ts = ts / 1000.; // to msec
-
-//     // milli second
-//     ts_msec = ts % 1000;
-//     ts = ts / 1000;
-//     msec_str = std::to_string(ts_msec);
-//     if (ts_msec < 10)
-//     {
-//         msec_str = "00" + msec_str;
-//     }
-//     else if (ts_msec < 100)
-//     {
-//         msec_str = "0" + msec_str;
-//     }
-
-//     // second
-//     ts_sec = ts % 60;
-//     ts = ts / 60;
-//     sec_str = std::to_string(ts_sec);
-//     if (ts_sec < 10)
-//     {
-//         sec_str = "0" + sec_str;
-//     }
-
-//     // minute
-//     ts_min = ts % 60;
-//     ts = ts / 60;
-//     min_str = std::to_string(ts_min);
-//     if (ts_min < 10)
-//     {
-//         min_str = "0" + min_str;
-//     }
-
-//     ts_hour = ts % 60;
-//     min_str = std::to_string(ts_min);
-//     if (ts_min < 10)
-//     {
-//         min_str = "0" + min_str;
-//     }
-
-//     std::string dir = hour_str + "/" + min_str;
-//     std::string fname = date + "_" + hour_str + min_str + sec_str;
-//     return dir + "/" + fname;
-// }
-
 static std::string get_output_path(std::string output_dir, std::string date, uint64_t ts)
 {
     uint64_t ts_msec, ts_sec, ts_min, ts_hour;
     std::string msec_str, sec_str, min_str, hour_str;
-    printf("data ts: %s, %ld\n", date.c_str(), ts);
+    // printf("data ts: %s, %ld\n", date.c_str(), ts);
 
     ts = ts / 1000.; // to msec
 
@@ -112,10 +62,10 @@ static std::string get_output_path(std::string output_dir, std::string date, uin
     fs::create_directories(dir);
     // printf("fs:crate:\n")
 
-    std::string fname = date + "_" + hour_str + min_str + sec_str + ".jpg";
+    std::string fname = date + "_" + hour_str + min_str + sec_str + "_" + msec_str + ".jpg";
 
-    printf("dir: %s\n", dir.c_str());
-    printf("fname: %s\n", fname.c_str());
+    // printf("dir: %s\n", dir.c_str());
+    // printf("fname: %s\n", fname.c_str());
     return dir + "/" + fname;
 }
 
@@ -127,7 +77,7 @@ static bool write_k4a_images(k4a_transformation_t transformation_handle,
                              std::string output_dir,
                              std::string date)
 {
-    printf("FUNC: write_k4_images\n");
+    // printf("FUNC: write_k4_images\n");
 
     // transform color image into depth camera geometry
     int depth_image_width_pixels = k4a_image_get_width_pixels(depth_image);
@@ -184,15 +134,15 @@ static bool write_k4a_images(k4a_transformation_t transformation_handle,
 
     // Write
     std::string file_name_depth = get_output_path(output_dir + "/depth", date, depth_ts);
-    printf("Path[depth]: %s\n", file_name_depth.c_str());
+    // printf("Path[depth]: %s\n", file_name_depth.c_str());
     tranformation_helpers_write_depth_image(depth_image, file_name_depth.c_str());
 
     std::string file_name_depth2 = get_output_path(output_dir + "/depth2", date, depth_ts);
-    printf("Path[depth]: %s\n", file_name_depth2.c_str());
+    // printf("Path[depth]: %s\n", file_name_depth2.c_str());
     tranformation_helpers_write_depth_image(transformed_depth_image, file_name_depth2.c_str());
 
     std::string file_name_color = get_output_path(output_dir + "/color", date, color_ts);
-    printf("Path[color]: %s\n", file_name_color.c_str());
+    // printf("Path[color]: %s\n", file_name_color.c_str());
     tranformation_helpers_write_color_image(color_image, file_name_color.c_str());
 
     // std::string file_name_color2 = output_dir + "/color2" + depth_path_suffix;
@@ -208,7 +158,7 @@ static bool write_k4a_images(k4a_transformation_t transformation_handle,
  */
 static int decompress_color_image(const k4a_image_t color_image, k4a_image_t uncompressed_color_image)
 {
-    printf("FUNC: decompress_color_image\n");
+    // printf("FUNC: decompress_color_image\n");
     int color_width, color_height;
     color_width = k4a_image_get_width_pixels(color_image);
     color_height = k4a_image_get_height_pixels(color_image);
@@ -261,7 +211,7 @@ static int extract_and_write_frame(k4a_capture_t capture = NULL,
     uint64_t color_timestamp_usec = 0;
     uint64_t depth_timestamp_usec = 0;
 
-    printf("FUNC: extract_and_write_frame\n");
+    // printf("FUNC: extract_and_write_frame\n");
 
     // Fetch frame
     depth_image = k4a_capture_get_depth_image(capture);
@@ -271,7 +221,7 @@ static int extract_and_write_frame(k4a_capture_t capture = NULL,
         goto ExitA;
     }
     depth_timestamp_usec = k4a_image_get_device_timestamp_usec(depth_image) + base_timestamp_usec;
-    printf("ts of depth: %ld, %ld\n", depth_timestamp_usec, base_timestamp_usec);
+    // printf("ts of depth: %ld, %ld\n", depth_timestamp_usec, base_timestamp_usec);
 
     color_image = k4a_capture_get_color_image(capture);
     if (color_image == 0)
@@ -280,7 +230,7 @@ static int extract_and_write_frame(k4a_capture_t capture = NULL,
         goto ExitA;
     }
     color_timestamp_usec = k4a_image_get_device_timestamp_usec(color_image) + base_timestamp_usec;
-    printf("ts of color: %ld\n", color_timestamp_usec);
+    // printf("ts of color: %ld\n", color_timestamp_usec);
 
     // Decompress Images
     int color_width, color_height;
@@ -356,7 +306,7 @@ static int playback(char *input_path,
                     std::string date = "000000",
                     std::string base_time_str = "00:00:00",
                     std::string output_dir = "./outputs",
-                    int timestamp = 1000)
+                    int start_timestamp = 10000)
 {
     int returnCode = 1;
     uint64_t base_timestamp_usec = 0;
@@ -368,6 +318,9 @@ static int playback(char *input_path,
     k4a_result_t result;
     k4a_stream_result_t stream_result;
     uint64_t recording_length_usec;
+    uint64_t sampling_interval_usec = 50000; // 100[ms] = 10Hz
+    uint64_t start_timestamp_usec;
+    // uint64_t timestamp = (uint64_t)start_timestamp;
 
     printf("FUNC: playback\n");
     base_timestamp_usec = parse_base_time(base_time_str);
@@ -383,32 +336,56 @@ static int playback(char *input_path,
     recording_length_usec = k4a_playback_get_recording_length_usec(playback);
     printf("Recording Length [usec]: %ld\n", recording_length_usec);
 
-    result = k4a_playback_seek_timestamp(playback, timestamp * 1000, K4A_PLAYBACK_SEEK_BEGIN);
-    if (result != K4A_RESULT_SUCCEEDED)
+    start_timestamp_usec = (uint64_t)start_timestamp * 1000;
+    recording_length_usec = start_timestamp_usec + sampling_interval_usec * 200;
+    for (uint64_t timestamp_usec = start_timestamp_usec; timestamp_usec < recording_length_usec;
+         timestamp_usec = timestamp_usec + sampling_interval_usec)
     {
-        printf("Failed to seek timestamp %d\n", timestamp);
-        goto Exit;
+        if (capture != NULL)
+        {
+            k4a_capture_release(capture);
+        }
+        if (transformation != NULL)
+        {
+            k4a_transformation_destroy(transformation);
+        }
+
+        result = k4a_playback_seek_timestamp(playback, timestamp_usec, K4A_PLAYBACK_SEEK_BEGIN);
+        if (result != K4A_RESULT_SUCCEEDED)
+        {
+            printf("Failed to seek timestamp %ld\n", timestamp_usec);
+            // goto Exit;
+            continue;
+        }
+        printf("TIME: %ld / %ld (msec)\n", timestamp_usec / 1000, recording_length_usec / 1000);
+
+        stream_result = k4a_playback_get_next_capture(playback, &capture);
+        if (stream_result != K4A_STREAM_RESULT_SUCCEEDED || capture == NULL)
+        {
+            printf("Failed to fetch frame\n");
+            continue;
+        }
+
+        if (K4A_RESULT_SUCCEEDED != k4a_playback_get_calibration(playback, &calibration))
+        {
+            printf("Failed to get calibration\n");
+            // goto Exit;
+            continue;
+        }
+
+        transformation = k4a_transformation_create(&calibration);
+
+        extract_and_write_frame(capture, transformation, date, base_timestamp_usec, output_dir);
+
+        // if (capture != NULL)
+        // {
+        //     k4a_capture_release(capture);
+        // }
+        // if (transformation != NULL)
+        // {
+        //     k4a_transformation_destroy(transformation);
+        // }
     }
-    printf("Seeking to timestamp: %d/%d (ms)\n",
-           timestamp,
-           (int)(k4a_playback_get_recording_length_usec(playback) / 1000));
-
-    stream_result = k4a_playback_get_next_capture(playback, &capture);
-    if (stream_result != K4A_STREAM_RESULT_SUCCEEDED || capture == NULL)
-    {
-        printf("Failed to fetch frame\n");
-        goto Exit;
-    }
-
-    if (K4A_RESULT_SUCCEEDED != k4a_playback_get_calibration(playback, &calibration))
-    {
-        printf("Failed to get calibration\n");
-        goto Exit;
-    }
-
-    transformation = k4a_transformation_create(&calibration);
-
-    extract_and_write_frame(capture, transformation, date, base_timestamp_usec, output_dir);
 
     returnCode = 0;
 
