@@ -10,7 +10,7 @@
 
 #include <vector>
 
-void tranformation_helpers_write_color_image_as_jpeg(const k4a_image_t color_image, const char *file_name)
+void tranformation_helpers_write_color_image(const k4a_image_t color_image, const char *file_name)
 {
     // Convert k4a_image_t to cv::Mat
     int width = k4a_image_get_width_pixels(color_image);
