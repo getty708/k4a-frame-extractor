@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <opencv2/opencv.hpp>
+#include "turbojpeg.h"
 
 #include <vector>
 
@@ -55,4 +56,48 @@ void tranformation_helpers_write_depth_image(const k4a_image_t depth_image, cons
     }
 
     cv::imwrite(file_name, image);
+}
+
+/**
+ * Convert color frame from mjpeg to bgra by libjpegturb
+ */
+int decompress_color_image(const k4a_image_t color_image, k4a_image_t uncompressed_color_image)
+{
+    // printf("FUNC: decompress_color_image\n");
+    int color_width, color_height;
+    color_width = k4a_image_get_width_pixels(color_image);
+    color_height = k4a_image_get_height_pixels(color_image);
+
+    k4a_image_format_t format;
+    format = k4a_image_get_format(color_image);
+    if (format != K4A_IMAGE_FORMAT_COLOR_MJPG)
+    {
+        printf("Color format not supported. Please use MJPEG\n");
+        return 1;
+    }
+
+    tjhandle tjHandle;
+    tjHandle = tjInitDecompress();
+    if (tjDecompress2(tjHandle,
+                      k4a_image_get_buffer(color_image),
+                      static_cast<unsigned long>(k4a_image_get_size(color_image)),
+                      k4a_image_get_buffer(uncompressed_color_image),
+                      color_width,
+                      0, // pitch
+                      color_height,
+                      TJPF_BGRA,
+                      TJFLAG_FASTDCT | TJFLAG_FASTUPSAMPLE) != 0)
+    {
+        printf("Failed to decompress color frame\n");
+        if (tjDestroy(tjHandle))
+        {
+            printf("Failed to destroy turboJPEG handle\n");
+        }
+        return 1;
+    }
+    if (tjDestroy(tjHandle))
+    {
+        printf("Failed to destroy turboJPEG handle\n");
+    }
+    return 0;
 }

@@ -5,7 +5,6 @@
 #include <k4arecord/playback.h>
 #include <string>
 #include "transformation_helpers.h"
-#include "turbojpeg.h"
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -128,10 +127,6 @@ static bool write_k4a_images(k4a_transformation_t transformation_handle,
         return false;
     }
 
-    // Path
-    // std::string depth_path_suffix = get_output_filename_from_timestamp(date, depth_ts);
-    // std::string color_path_suffix = get_output_filename_from_timestamp(date, color_ts);
-
     // Write
     std::string file_name_depth = get_output_path(output_dir + "/depth", date, depth_ts);
     // printf("Path[depth]: %s\n", file_name_depth.c_str());
@@ -151,50 +146,6 @@ static bool write_k4a_images(k4a_transformation_t transformation_handle,
     k4a_image_release(transformed_depth_image);
     k4a_image_release(transformed_color_image);
     return true;
-}
-
-/**
- * Convert color frame from mjpeg to bgra by libjpegturb
- */
-static int decompress_color_image(const k4a_image_t color_image, k4a_image_t uncompressed_color_image)
-{
-    // printf("FUNC: decompress_color_image\n");
-    int color_width, color_height;
-    color_width = k4a_image_get_width_pixels(color_image);
-    color_height = k4a_image_get_height_pixels(color_image);
-
-    k4a_image_format_t format;
-    format = k4a_image_get_format(color_image);
-    if (format != K4A_IMAGE_FORMAT_COLOR_MJPG)
-    {
-        printf("Color format not supported. Please use MJPEG\n");
-        return 1;
-    }
-
-    tjhandle tjHandle;
-    tjHandle = tjInitDecompress();
-    if (tjDecompress2(tjHandle,
-                      k4a_image_get_buffer(color_image),
-                      static_cast<unsigned long>(k4a_image_get_size(color_image)),
-                      k4a_image_get_buffer(uncompressed_color_image),
-                      color_width,
-                      0, // pitch
-                      color_height,
-                      TJPF_BGRA,
-                      TJFLAG_FASTDCT | TJFLAG_FASTUPSAMPLE) != 0)
-    {
-        printf("Failed to decompress color frame\n");
-        if (tjDestroy(tjHandle))
-        {
-            printf("Failed to destroy turboJPEG handle\n");
-        }
-        return 1;
-    }
-    if (tjDestroy(tjHandle))
-    {
-        printf("Failed to destroy turboJPEG handle\n");
-    }
-    return 0;
 }
 
 // Extract frame at a given timestamp [us] and save file.
@@ -306,7 +257,8 @@ static int playback(char *input_path,
                     std::string date = "000000",
                     std::string base_time_str = "00:00:00",
                     std::string output_dir = "./outputs",
-                    int start_timestamp = 10000)
+                    int start_timestamp = 10000,
+                    std::string debug = "")
 {
     int returnCode = 1;
     uint64_t base_timestamp_usec = 0;
@@ -337,7 +289,10 @@ static int playback(char *input_path,
     printf("Recording Length [usec]: %ld\n", recording_length_usec);
 
     start_timestamp_usec = (uint64_t)start_timestamp * 1000;
-    recording_length_usec = start_timestamp_usec + sampling_interval_usec * 200;
+    if (debug == "--debug")
+    {
+        recording_length_usec = start_timestamp_usec + sampling_interval_usec * 200;
+    }
     for (uint64_t timestamp_usec = start_timestamp_usec; timestamp_usec < recording_length_usec;
          timestamp_usec = timestamp_usec + sampling_interval_usec)
     {
@@ -376,15 +331,6 @@ static int playback(char *input_path,
         transformation = k4a_transformation_create(&calibration);
 
         extract_and_write_frame(capture, transformation, date, base_timestamp_usec, output_dir);
-
-        // if (capture != NULL)
-        // {
-        //     k4a_capture_release(capture);
-        // }
-        // if (transformation != NULL)
-        // {
-        //     k4a_transformation_destroy(transformation);
-        // }
     }
 
     returnCode = 0;
@@ -408,7 +354,7 @@ Exit:
 static void print_usage()
 {
     printf("Usage: transformation_example <filename.mkv> [date: YYYYmmdd] [base_time_str: HH:MM:SS] "
-           "[output_dir] [timestamp (ms)]\n");
+           "[output_dir] [timestamp (ms)] [--debug]\n");
 }
 
 int main(int argc, char **argv)
@@ -432,6 +378,10 @@ int main(int argc, char **argv)
         else if (argc == 6)
         {
             returnCode = playback(argv[1], argv[2], argv[3], argv[4], atoi(argv[5]));
+        }
+        else if (argc == 7)
+        {
+            returnCode = playback(argv[1], argv[2], argv[3], argv[4], atoi(argv[5]), argv[6]);
         }
         else
         {
