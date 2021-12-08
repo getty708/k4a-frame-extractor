@@ -8,73 +8,117 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-static std::string get_output_path(std::string output_dir, std::string date, uint64_t ts)
+// typedef time_t dtime_t; // 00:00:00.000 からの経過時間 (マイクロ秒, usec)
+typedef timeval timeval_delta;
+
+// static std::string get_output_path(std::string output_dir, std::string date, uint64_t ts)
+// {
+//     uint64_t ts_msec, ts_sec, ts_min, ts_hour;
+//     std::string msec_str, sec_str, min_str, hour_str;
+//     // printf("data ts: %s, %ld\n", date.c_str(), ts);
+
+//     ts = ts / 1000.; // to msec
+
+//     // milli second
+//     ts_msec = ts % 1000;
+//     ts = ts / 1000;
+//     msec_str = std::to_string(ts_msec);
+//     if (ts_msec < 10)
+//     {
+//         msec_str = "00" + msec_str;
+//     }
+//     else if (ts_msec < 100)
+//     {
+//         msec_str = "0" + msec_str;
+//     }
+
+//     // second
+//     ts_sec = ts % 60;
+//     ts = ts / 60;
+//     sec_str = std::to_string(ts_sec);
+//     if (ts_sec < 10)
+//     {
+//         sec_str = "0" + sec_str;
+//     }
+
+//     // minute
+//     ts_min = ts % 60;
+//     ts = ts / 60;
+//     min_str = std::to_string(ts_min);
+//     if (ts_min < 10)
+//     {
+//         min_str = "0" + min_str;
+//     }
+
+//     ts_hour = ts % 60;
+//     hour_str = std::to_string(ts_hour);
+//     if (ts_hour < 10)
+//     {
+//         hour_str = "0" + hour_str;
+//     }
+
+//     // directory
+//     std::string dir = output_dir + "/" + hour_str + "/" + min_str;
+//     // std::filesystem::create_directories(dir);
+//     // bool result2 =
+//     fs::create_directories(dir);
+//     // printf("fs:crate:\n")
+
+//     std::string fname = date + "_" + hour_str + min_str + sec_str + "_" + msec_str + ".jpg";
+
+//     // printf("dir: %s\n", dir.c_str());
+//     // printf("fname: %s\n", fname.c_str());
+//     return dir + "/" + fname;
+// }
+
+static std::string get_output_path(std::string output_dir, const struct timeval *tv)
 {
-    uint64_t ts_msec, ts_sec, ts_min, ts_hour;
+    // uint64_t ts_msec, ts_sec, ts_min, ts_hour;
+    uint64_t ts_usec, msec;
+    time_t ts_unix;
+    struct tm datetime;
     std::string msec_str, sec_str, min_str, hour_str;
     // printf("data ts: %s, %ld\n", date.c_str(), ts);
 
-    ts = ts / 1000.; // to msec
+    ts_unix = (time_t)tv->tv_sec;
+    localtime_r(&ts_unix, &datetime);
 
-    // milli second
-    ts_msec = ts % 1000;
-    ts = ts / 1000;
-    msec_str = std::to_string(ts_msec);
-    if (ts_msec < 10)
+    // directory
+    char buf[32];
+    strftime(buf, 32, "%Y/%m/%d/%H/%M", &datetime);
+    std::string mid_dir = std::string(buf);
+    // printf("DATETIME@get_path(): %s\n", buf);
+    printf("mid_dir@get_path(): %s\n", mid_dir.c_str());
+
+    // filename
+    strftime(buf, 32, "%Y%m%d_%H%M%S", &datetime);
+    msec = (uint64_t)(tv->tv_usec / 1000);
+    msec_str = std::to_string(msec);
+    if (msec_str.length() == 1)
     {
         msec_str = "00" + msec_str;
     }
-    else if (ts_msec < 100)
+    else if (msec_str.length() == 2)
     {
         msec_str = "0" + msec_str;
     }
-
-    // second
-    ts_sec = ts % 60;
-    ts = ts / 60;
-    sec_str = std::to_string(ts_sec);
-    if (ts_sec < 10)
-    {
-        sec_str = "0" + sec_str;
-    }
-
-    // minute
-    ts_min = ts % 60;
-    ts = ts / 60;
-    min_str = std::to_string(ts_min);
-    if (ts_min < 10)
-    {
-        min_str = "0" + min_str;
-    }
-
-    ts_hour = ts % 60;
-    hour_str = std::to_string(ts_hour);
-    if (ts_hour < 10)
-    {
-        hour_str = "0" + hour_str;
-    }
+    std::string fname = std::string(buf) + "_" + msec_str + ".jpg";
+    printf("fname@get_path(): %s\n", fname.c_str());
 
     // directory
-    std::string dir = output_dir + "/" + hour_str + "/" + min_str;
-    // std::filesystem::create_directories(dir);
-    // bool result2 =
+    std::string dir = output_dir + "/" + mid_dir;
+    std::filesystem::create_directories(dir);
     fs::create_directories(dir);
-    // printf("fs:crate:\n")
 
-    std::string fname = date + "_" + hour_str + min_str + sec_str + "_" + msec_str + ".jpg";
-
-    // printf("dir: %s\n", dir.c_str());
-    // printf("fname: %s\n", fname.c_str());
     return dir + "/" + fname;
 }
 
 static bool write_k4a_images(k4a_transformation_t transformation_handle,
                              const k4a_image_t depth_image,
-                             uint64_t depth_ts,
+                             const struct timeval *depth_tv,
                              const k4a_image_t color_image, // Uncompressed Image
-                             uint64_t color_ts,
-                             std::string output_dir,
-                             std::string date)
+                             const struct timeval *color_tv,
+                             std::string output_dir)
 {
     // printf("FUNC: write_k4_images\n");
 
@@ -128,15 +172,15 @@ static bool write_k4a_images(k4a_transformation_t transformation_handle,
     }
 
     // Write
-    std::string file_name_depth = get_output_path(output_dir + "/depth", date, depth_ts);
+    std::string file_name_depth = get_output_path(output_dir + "/depth", depth_tv);
     // printf("Path[depth]: %s\n", file_name_depth.c_str());
     tranformation_helpers_write_depth_image(depth_image, file_name_depth.c_str());
 
-    std::string file_name_depth2 = get_output_path(output_dir + "/depth2", date, depth_ts);
+    std::string file_name_depth2 = get_output_path(output_dir + "/depth2", depth_tv);
     // printf("Path[depth]: %s\n", file_name_depth2.c_str());
     tranformation_helpers_write_depth_image(transformed_depth_image, file_name_depth2.c_str());
 
-    std::string file_name_color = get_output_path(output_dir + "/color", date, color_ts);
+    std::string file_name_color = get_output_path(output_dir + "/color", color_tv);
     // printf("Path[color]: %s\n", file_name_color.c_str());
     tranformation_helpers_write_color_image(color_image, file_name_color.c_str());
 
@@ -148,19 +192,44 @@ static bool write_k4a_images(k4a_transformation_t transformation_handle,
     return true;
 }
 
+/**
+ * @brief  マイクロ秒を timval_delta に変換する.
+ *
+ * @param ts {uint64_t} マイクロ秒
+ * @param tvd {timeval_delta}
+ */
+static void to_timeval_delta(const uint64_t ts, timeval_delta *tvd)
+{
+    tvd->tv_sec = (long)ts / (1000 * 1000);
+    tvd->tv_usec = (long)ts % (1000 * 1000);
+}
+
+static void add_timeval(const struct timeval *tv1, const struct timeval *tv2, struct timeval *tv_out)
+{
+    long tv_sec = tv1->tv_sec + tv2->tv_sec;
+    long tv_usec = tv1->tv_usec + tv2->tv_usec;
+    if (tv_usec > (1000 * 1000))
+    {
+        tv_sec += tv_usec / (1000 * 1000);
+        tv_usec = tv_usec % (1000 * 1000);
+    }
+    tv_out->tv_sec = tv_sec;
+    tv_out->tv_usec = tv_usec;
+}
+
 // Extract frame at a given timestamp [us] and save file.
 static int extract_and_write_frame(k4a_capture_t capture = NULL,
                                    k4a_transformation_t transformation = NULL,
-                                   const std::string date = "000000",
-                                   const uint64_t base_timestamp_usec = 0,
+                                   const struct timeval *base_tv = { 0 },
                                    std::string output_dir = "outputs")
 {
     int return_code = 1;
     k4a_image_t depth_image = NULL;
     k4a_image_t color_image = NULL;
     k4a_image_t uncompressed_color_image = NULL;
-    uint64_t color_timestamp_usec = 0;
-    uint64_t depth_timestamp_usec = 0;
+    uint64_t color_ts, depth_ts;
+    timeval_delta tvd;
+    struct timeval color_tv, depth_tv;
 
     // printf("FUNC: extract_and_write_frame\n");
 
@@ -171,8 +240,10 @@ static int extract_and_write_frame(k4a_capture_t capture = NULL,
         printf("Failed to get depth image from capture\n");
         goto ExitA;
     }
-    depth_timestamp_usec = k4a_image_get_device_timestamp_usec(depth_image) + base_timestamp_usec;
-    // printf("ts of depth: %ld, %ld\n", depth_timestamp_usec, base_timestamp_usec);
+    depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
+    to_timeval_delta(depth_ts, &tvd);
+    add_timeval(base_tv, &tvd, &depth_tv);
+    printf("depth_tv: sec=%ld, usec=%ld\n", depth_tv.tv_sec, depth_tv.tv_usec);
 
     color_image = k4a_capture_get_color_image(capture);
     if (color_image == 0)
@@ -180,7 +251,11 @@ static int extract_and_write_frame(k4a_capture_t capture = NULL,
         printf("Failed to get color image from capture\n");
         goto ExitA;
     }
-    color_timestamp_usec = k4a_image_get_device_timestamp_usec(color_image) + base_timestamp_usec;
+    color_ts = k4a_image_get_device_timestamp_usec(color_image);
+    to_timeval_delta(color_ts, &tvd);
+    add_timeval(base_tv, &tvd, &color_tv);
+    printf("color_tv: sec=%ld, usec=%ld\n", color_tv.tv_sec, color_tv.tv_usec);
+
     // printf("ts of color: %ld\n", color_timestamp_usec);
 
     // Decompress Images
@@ -203,13 +278,8 @@ static int extract_and_write_frame(k4a_capture_t capture = NULL,
     }
 
     // Compute color point cloud by warping depth image into color camera geometry
-    if (write_k4a_images(transformation,
-                         depth_image,
-                         depth_timestamp_usec,
-                         uncompressed_color_image,
-                         color_timestamp_usec,
-                         output_dir,
-                         date) == false)
+    if (write_k4a_images(transformation, depth_image, &depth_tv, uncompressed_color_image, &color_tv, output_dir) ==
+        false)
     {
         printf("Failed to transform depth to color\n");
         goto ExitA;
@@ -232,36 +302,76 @@ ExitA:
     return return_code;
 }
 
+// /**
+//  * @brief Parse base time string and convert it into microsecond from the start of the day.
+//  *
+//  * @param base_time_str
+//  * @return int
+//  */
+// static uint64_t parse_base_time(std::string base_time_str)
+// {
+//     // Configure Filename (timestamp)
+//     // std::string base_time_str = "12:01:02";
+//     std::string hour_str = base_time_str.substr(0, 2);
+//     std::string min_str = base_time_str.substr(3, 2);
+//     std::string sec_str = base_time_str.substr(6, 2);
+//     uint64_t base_ts_sec = (uint64_t)(std::stoi(sec_str) + std::stoi(min_str) * 60 + std::stoi(hour_str) * 3600);
+//     uint64_t base_ts_usec = base_ts_sec * 1000 * 1000;
+//     printf("BaseTime: %s, %s, %s ==> %ld\n", hour_str.c_str(), min_str.c_str(), sec_str.c_str(), base_ts_usec);
+
+//     return base_ts_usec;
+// }
+
 /**
  * @brief Parse base time string and convert it into microsecond from the start of the day.
  *
- * @param base_time_str
+ * @param base_time_str "2021-12-10_10:11:12.000"
  * @return int
  */
-static uint64_t parse_base_time(std::string base_time_str)
+static int parse_base_timestamp(std::string base_datetime_str, struct timeval *base_tv)
 {
-    // Configure Filename (timestamp)
-    // std::string base_time_str = "12:01:02";
-    std::string hour_str = base_time_str.substr(0, 2);
-    std::string min_str = base_time_str.substr(3, 2);
-    std::string sec_str = base_time_str.substr(6, 2);
-    uint64_t base_ts_sec = (uint64_t)(std::stoi(sec_str) + std::stoi(min_str) * 60 + std::stoi(hour_str) * 3600);
-    uint64_t base_ts_usec = base_ts_sec * 1000 * 1000;
-    printf("BaseTime: %s, %s, %s ==> %ld\n", hour_str.c_str(), min_str.c_str(), sec_str.c_str(), base_ts_usec);
+    struct tm base_datetime = { 0 };
 
-    return base_ts_usec;
+    // std::string base_time_str = "12:01:02";
+    int year = std::stoi(base_datetime_str.substr(0, 4));
+    int month = std::stoi(base_datetime_str.substr(5, 2));
+    int day = std::stoi(base_datetime_str.substr(8, 2));
+    int hour = std::stoi(base_datetime_str.substr(11, 2));
+    int minute = std::stoi(base_datetime_str.substr(14, 2));
+    int sec = std::stoi(base_datetime_str.substr(17, 2));
+    int msec = std::stoi(base_datetime_str.substr(20, 3));
+    // printf("%d-%d-%d %d:%d:%d\n", year, month, day, hour, minute, sec);
+
+    base_datetime.tm_year = year - 1900;
+    base_datetime.tm_mon = month - 1;
+    base_datetime.tm_mday = day;
+    base_datetime.tm_hour = hour;
+    base_datetime.tm_min = minute;
+    base_datetime.tm_sec = sec;
+    printf("BASE DATETIME: %d-%d-%d_%d:%d:%d wday=%d, yday=%d, isdst=%d\n",
+           base_datetime.tm_year + 1900,
+           base_datetime.tm_mon + 1,
+           base_datetime.tm_mday,
+           base_datetime.tm_hour,
+           base_datetime.tm_min,
+           base_datetime.tm_sec,
+           base_datetime.tm_wday,
+           base_datetime.tm_yday,
+           base_datetime.tm_isdst);
+
+    base_tv->tv_sec = mktime(&base_datetime);
+    base_tv->tv_usec = msec * 1000;
+    return 0;
 }
 
 // Timestamp in milliseconds. Defaults to 1 sec as the first couple frames don't contain color
 static int playback(char *input_path,
-                    std::string date = "000000",
-                    std::string base_time_str = "00:00:00",
+                    std::string base_datetime_str = "2020-01-01_00:00:00",
                     std::string output_dir = "./outputs",
                     int start_timestamp = 10000,
                     std::string debug = "")
 {
     int returnCode = 1;
-    uint64_t base_timestamp_usec = 0;
     k4a_playback_t playback = NULL;
     k4a_calibration_t calibration;
     k4a_transformation_t transformation = NULL;
@@ -272,10 +382,13 @@ static int playback(char *input_path,
     uint64_t recording_length_usec;
     uint64_t sampling_interval_usec = 50000; // 100[ms] = 10Hz
     uint64_t start_timestamp_usec;
-    // uint64_t timestamp = (uint64_t)start_timestamp;
+    // struct tm base_date = { 0 };
+    // dtime_t base_dtime = 0;
+    struct timeval base_tv;
 
     printf("FUNC: playback\n");
-    base_timestamp_usec = parse_base_time(base_time_str);
+    parse_base_timestamp(base_datetime_str, &base_tv);
+    printf("BASE DATETIME: sec=%ld,  usec=%ld\n", base_tv.tv_sec, base_tv.tv_usec);
 
     // Open recording
     result = k4a_playback_open(input_path, &playback);
@@ -291,7 +404,7 @@ static int playback(char *input_path,
     start_timestamp_usec = (uint64_t)start_timestamp * 1000;
     if (debug == "--debug")
     {
-        recording_length_usec = start_timestamp_usec + sampling_interval_usec * 200;
+        recording_length_usec = start_timestamp_usec + sampling_interval_usec * 20;
     }
     for (uint64_t timestamp_usec = start_timestamp_usec; timestamp_usec < recording_length_usec;
          timestamp_usec = timestamp_usec + sampling_interval_usec)
@@ -330,7 +443,8 @@ static int playback(char *input_path,
 
         transformation = k4a_transformation_create(&calibration);
 
-        extract_and_write_frame(capture, transformation, date, base_timestamp_usec, output_dir);
+        // dtime_t current_timestamp = base_dtime + timestamp_usec;
+        extract_and_write_frame(capture, transformation, &base_tv, output_dir);
     }
 
     returnCode = 0;
@@ -353,7 +467,7 @@ Exit:
 
 static void print_usage()
 {
-    printf("Usage: transformation_example <filename.mkv> [date: YYYYmmdd] [base_time_str: HH:MM:SS] "
+    printf("Usage: transformation_example <filename.mkv> [datetime: YYYY-mm-dd_HH:MM:SS] "
            "[output_dir] [timestamp (ms)] [--debug]\n");
 }
 
@@ -367,21 +481,21 @@ int main(int argc, char **argv)
     }
     else
     {
+        if (argc == 3)
+        {
+            returnCode = playback(argv[1], argv[2]);
+        }
         if (argc == 4)
         {
             returnCode = playback(argv[1], argv[2], argv[3]);
         }
         else if (argc == 5)
         {
-            returnCode = playback(argv[1], argv[2], argv[3], argv[4]);
+            returnCode = playback(argv[1], argv[2], argv[3], atoi(argv[4]));
         }
         else if (argc == 6)
         {
-            returnCode = playback(argv[1], argv[2], argv[3], argv[4], atoi(argv[5]));
-        }
-        else if (argc == 7)
-        {
-            returnCode = playback(argv[1], argv[2], argv[3], argv[4], atoi(argv[5]), argv[6]);
+            returnCode = playback(argv[1], argv[2], argv[3], atoi(argv[4]), argv[5]);
         }
         else
         {
