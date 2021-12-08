@@ -8,68 +8,7 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-// typedef time_t dtime_t; // 00:00:00.000 からの経過時間 (マイクロ秒, usec)
 typedef timeval timeval_delta;
-
-// static std::string get_output_path(std::string output_dir, std::string date, uint64_t ts)
-// {
-//     uint64_t ts_msec, ts_sec, ts_min, ts_hour;
-//     std::string msec_str, sec_str, min_str, hour_str;
-//     // printf("data ts: %s, %ld\n", date.c_str(), ts);
-
-//     ts = ts / 1000.; // to msec
-
-//     // milli second
-//     ts_msec = ts % 1000;
-//     ts = ts / 1000;
-//     msec_str = std::to_string(ts_msec);
-//     if (ts_msec < 10)
-//     {
-//         msec_str = "00" + msec_str;
-//     }
-//     else if (ts_msec < 100)
-//     {
-//         msec_str = "0" + msec_str;
-//     }
-
-//     // second
-//     ts_sec = ts % 60;
-//     ts = ts / 60;
-//     sec_str = std::to_string(ts_sec);
-//     if (ts_sec < 10)
-//     {
-//         sec_str = "0" + sec_str;
-//     }
-
-//     // minute
-//     ts_min = ts % 60;
-//     ts = ts / 60;
-//     min_str = std::to_string(ts_min);
-//     if (ts_min < 10)
-//     {
-//         min_str = "0" + min_str;
-//     }
-
-//     ts_hour = ts % 60;
-//     hour_str = std::to_string(ts_hour);
-//     if (ts_hour < 10)
-//     {
-//         hour_str = "0" + hour_str;
-//     }
-
-//     // directory
-//     std::string dir = output_dir + "/" + hour_str + "/" + min_str;
-//     // std::filesystem::create_directories(dir);
-//     // bool result2 =
-//     fs::create_directories(dir);
-//     // printf("fs:crate:\n")
-
-//     std::string fname = date + "_" + hour_str + min_str + sec_str + "_" + msec_str + ".jpg";
-
-//     // printf("dir: %s\n", dir.c_str());
-//     // printf("fname: %s\n", fname.c_str());
-//     return dir + "/" + fname;
-// }
 
 static std::string get_output_path(std::string output_dir, const struct timeval *tv)
 {
@@ -88,7 +27,7 @@ static std::string get_output_path(std::string output_dir, const struct timeval 
     strftime(buf, 32, "%Y/%m/%d/%H/%M", &datetime);
     std::string mid_dir = std::string(buf);
     // printf("DATETIME@get_path(): %s\n", buf);
-    printf("mid_dir@get_path(): %s\n", mid_dir.c_str());
+    // printf("mid_dir@get_path(): %s\n", mid_dir.c_str());
 
     // filename
     strftime(buf, 32, "%Y%m%d_%H%M%S", &datetime);
@@ -103,7 +42,7 @@ static std::string get_output_path(std::string output_dir, const struct timeval 
         msec_str = "0" + msec_str;
     }
     std::string fname = std::string(buf) + "_" + msec_str + ".jpg";
-    printf("fname@get_path(): %s\n", fname.c_str());
+    // printf("fname@get_path(): %s\n", fname.c_str());
 
     // directory
     std::string dir = output_dir + "/" + mid_dir;
@@ -302,26 +241,6 @@ ExitA:
     return return_code;
 }
 
-// /**
-//  * @brief Parse base time string and convert it into microsecond from the start of the day.
-//  *
-//  * @param base_time_str
-//  * @return int
-//  */
-// static uint64_t parse_base_time(std::string base_time_str)
-// {
-//     // Configure Filename (timestamp)
-//     // std::string base_time_str = "12:01:02";
-//     std::string hour_str = base_time_str.substr(0, 2);
-//     std::string min_str = base_time_str.substr(3, 2);
-//     std::string sec_str = base_time_str.substr(6, 2);
-//     uint64_t base_ts_sec = (uint64_t)(std::stoi(sec_str) + std::stoi(min_str) * 60 + std::stoi(hour_str) * 3600);
-//     uint64_t base_ts_usec = base_ts_sec * 1000 * 1000;
-//     printf("BaseTime: %s, %s, %s ==> %ld\n", hour_str.c_str(), min_str.c_str(), sec_str.c_str(), base_ts_usec);
-
-//     return base_ts_usec;
-// }
-
 /**
  * @brief Parse base time string and convert it into microsecond from the start of the day.
  *
@@ -348,16 +267,16 @@ static int parse_base_timestamp(std::string base_datetime_str, struct timeval *b
     base_datetime.tm_hour = hour;
     base_datetime.tm_min = minute;
     base_datetime.tm_sec = sec;
-    printf("BASE DATETIME: %d-%d-%d_%d:%d:%d wday=%d, yday=%d, isdst=%d\n",
-           base_datetime.tm_year + 1900,
-           base_datetime.tm_mon + 1,
-           base_datetime.tm_mday,
-           base_datetime.tm_hour,
-           base_datetime.tm_min,
-           base_datetime.tm_sec,
-           base_datetime.tm_wday,
-           base_datetime.tm_yday,
-           base_datetime.tm_isdst);
+    // printf("BASE DATETIME: %d-%d-%d_%d:%d:%d wday=%d, yday=%d, isdst=%d\n",
+    //        base_datetime.tm_year + 1900,
+    //        base_datetime.tm_mon + 1,
+    //        base_datetime.tm_mday,
+    //        base_datetime.tm_hour,
+    //        base_datetime.tm_min,
+    //        base_datetime.tm_sec,
+    //        base_datetime.tm_wday,
+    //        base_datetime.tm_yday,
+    //        base_datetime.tm_isdst);
 
     base_tv->tv_sec = mktime(&base_datetime);
     base_tv->tv_usec = msec * 1000;
