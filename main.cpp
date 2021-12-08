@@ -8,8 +8,6 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-typedef timeval timeval_delta;
-
 static std::string get_output_path(std::string output_dir, const struct timeval *tv)
 {
     // uint64_t ts_msec, ts_sec, ts_min, ts_hour;
@@ -131,31 +129,6 @@ static bool write_k4a_images(k4a_transformation_t transformation_handle,
     return true;
 }
 
-/**
- * @brief  マイクロ秒を timval_delta に変換する.
- *
- * @param ts {uint64_t} マイクロ秒
- * @param tvd {timeval_delta}
- */
-static void to_timeval_delta(const uint64_t ts, timeval_delta *tvd)
-{
-    tvd->tv_sec = (long)ts / (1000 * 1000);
-    tvd->tv_usec = (long)ts % (1000 * 1000);
-}
-
-static void add_timeval(const struct timeval *tv1, const struct timeval *tv2, struct timeval *tv_out)
-{
-    long tv_sec = tv1->tv_sec + tv2->tv_sec;
-    long tv_usec = tv1->tv_usec + tv2->tv_usec;
-    if (tv_usec > (1000 * 1000))
-    {
-        tv_sec += tv_usec / (1000 * 1000);
-        tv_usec = tv_usec % (1000 * 1000);
-    }
-    tv_out->tv_sec = tv_sec;
-    tv_out->tv_usec = tv_usec;
-}
-
 // Extract frame at a given timestamp [us] and save file.
 static int extract_and_write_frame(k4a_capture_t capture = NULL,
                                    k4a_transformation_t transformation = NULL,
@@ -239,48 +212,6 @@ ExitA:
         k4a_image_release(uncompressed_color_image);
     }
     return return_code;
-}
-
-/**
- * @brief Parse base time string and convert it into microsecond from the start of the day.
- *
- * @param base_time_str "2021-12-10_10:11:12.000"
- * @return int
- */
-static int parse_base_timestamp(std::string base_datetime_str, struct timeval *base_tv)
-{
-    struct tm base_datetime = { 0 };
-
-    // std::string base_time_str = "12:01:02";
-    int year = std::stoi(base_datetime_str.substr(0, 4));
-    int month = std::stoi(base_datetime_str.substr(5, 2));
-    int day = std::stoi(base_datetime_str.substr(8, 2));
-    int hour = std::stoi(base_datetime_str.substr(11, 2));
-    int minute = std::stoi(base_datetime_str.substr(14, 2));
-    int sec = std::stoi(base_datetime_str.substr(17, 2));
-    int msec = std::stoi(base_datetime_str.substr(20, 3));
-    // printf("%d-%d-%d %d:%d:%d\n", year, month, day, hour, minute, sec);
-
-    base_datetime.tm_year = year - 1900;
-    base_datetime.tm_mon = month - 1;
-    base_datetime.tm_mday = day;
-    base_datetime.tm_hour = hour;
-    base_datetime.tm_min = minute;
-    base_datetime.tm_sec = sec;
-    // printf("BASE DATETIME: %d-%d-%d_%d:%d:%d wday=%d, yday=%d, isdst=%d\n",
-    //        base_datetime.tm_year + 1900,
-    //        base_datetime.tm_mon + 1,
-    //        base_datetime.tm_mday,
-    //        base_datetime.tm_hour,
-    //        base_datetime.tm_min,
-    //        base_datetime.tm_sec,
-    //        base_datetime.tm_wday,
-    //        base_datetime.tm_yday,
-    //        base_datetime.tm_isdst);
-
-    base_tv->tv_sec = mktime(&base_datetime);
-    base_tv->tv_usec = msec * 1000;
-    return 0;
 }
 
 // Timestamp in milliseconds. Defaults to 1 sec as the first couple frames don't contain color
