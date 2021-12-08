@@ -42,7 +42,7 @@ static std::string get_output_path(std::string output_dir, const struct timeval 
         msec_str = "0" + msec_str;
     }
     std::string fname = std::string(buf) + "_" + msec_str + ".jpg";
-    // printf("fname@get_path(): %s\n", fname.c_str());
+    printf("fname: %s\n", fname.c_str());
 
     // directory
     std::string dir = output_dir + "/" + mid_dir;
@@ -182,7 +182,7 @@ static int extract_and_write_frame(k4a_capture_t capture = NULL,
     depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
     to_timeval_delta(depth_ts, &tvd);
     add_timeval(base_tv, &tvd, &depth_tv);
-    printf("depth_tv: sec=%ld, usec=%ld\n", depth_tv.tv_sec, depth_tv.tv_usec);
+    // printf("depth_tv: sec=%ld, usec=%ld\n", depth_tv.tv_sec, depth_tv.tv_usec);
 
     color_image = k4a_capture_get_color_image(capture);
     if (color_image == 0)
@@ -193,7 +193,7 @@ static int extract_and_write_frame(k4a_capture_t capture = NULL,
     color_ts = k4a_image_get_device_timestamp_usec(color_image);
     to_timeval_delta(color_ts, &tvd);
     add_timeval(base_tv, &tvd, &color_tv);
-    printf("color_tv: sec=%ld, usec=%ld\n", color_tv.tv_sec, color_tv.tv_usec);
+    // printf("color_tv: sec=%ld, usec=%ld\n", color_tv.tv_sec, color_tv.tv_usec);
 
     // printf("ts of color: %ld\n", color_timestamp_usec);
 
