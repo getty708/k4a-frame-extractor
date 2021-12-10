@@ -47,30 +47,6 @@ static std::string get_output_path(std::string output_dir, const struct timeval 
     return dir + "/" + fname;
 }
 
-// TODO: Marge into tranformation_helpers_write_color_image()
-static bool write_k4a_color_frame(k4a_transformation_t transformation_handle,
-                                  const k4a_image_t color_image, // Uncompressed Image
-                                  const struct timeval *color_tv,
-                                  std::string output_dir)
-{
-    std::string file_name = get_output_path(output_dir, color_tv);
-    // printf("PATH: %s\n", file_name.c_str());
-    tranformation_helpers_write_color_image(color_image, file_name.c_str());
-
-    return true;
-}
-
-// TODO: Marge into tranformation_helpers_write_depth_image()
-static bool write_k4a_depth_frame(const k4a_image_t depth_image, const struct timeval *depth_tv, std::string output_dir)
-{
-    std::string file_name = get_output_path(output_dir, depth_tv, ".png");
-    // printf("Path[depth]: %s\n", file_name.c_str());
-    tranformation_helpers_write_depth_image(depth_image, file_name.c_str());
-    // tranformation_helpers_write_depth_image_3ch(depth_image, file_name.c_str());
-
-    return true;
-}
-
 // Extract frame at a given timestamp [us] and save file.
 static uint64_t extract_and_write_color_frame(k4a_capture_t capture = NULL,
                                               k4a_transformation_t transformation = NULL,
@@ -83,7 +59,8 @@ static uint64_t extract_and_write_color_frame(k4a_capture_t capture = NULL,
     uint64_t color_ts = 0;
     timeval_delta tvd;
     struct timeval color_tv;
-    std::string dir;
+    // std::string dir;
+    std::string path;
 
     color_image = k4a_capture_get_color_image(capture);
     if (color_image == 0)
@@ -117,8 +94,8 @@ static uint64_t extract_and_write_color_frame(k4a_capture_t capture = NULL,
     }
 
     // Compute color point cloud by warping depth image into color camera geometry
-    dir = output_dir + "/color";
-    if (write_k4a_color_frame(transformation, uncompressed_color_image, &color_tv, dir) == false)
+    path = get_output_path(output_dir + "/color", &color_tv);
+    if (write_k4a_color_image(uncompressed_color_image, path.c_str()) != 0)
     {
         printf("Failed to write color frame\n");
         color_ts = 0;
@@ -148,7 +125,7 @@ static uint64_t extract_and_write_depth_frame(k4a_capture_t capture = NULL,
     uint64_t depth_ts = 0;
     timeval_delta tvd;
     struct timeval depth_tv;
-    std::string dir;
+    std::string path;
 
     // Fetch frame
     depth_image = k4a_capture_get_depth_image(capture);
@@ -163,8 +140,8 @@ static uint64_t extract_and_write_depth_frame(k4a_capture_t capture = NULL,
     add_timeval(base_tv, &tvd, &depth_tv);
 
     // Compute color point cloud by warping depth image into color camera geometry
-    dir = output_dir + "/depth";
-    if (write_k4a_depth_frame(depth_image, &depth_tv, dir) == false)
+    path = get_output_path(output_dir + "/depth", &depth_tv);
+    if (write_k4a_depth_image(depth_image, path.c_str()) != 0)
     {
         printf("Failed to transform depth to color @extract_and_write_depth_frame()\n");
         depth_ts = 0;
@@ -192,7 +169,7 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_capture_t capture =
     struct timeval depth_tv;
     int color_image_width_pixels, color_image_height_pixels;
     k4a_image_t transformed_depth_image = NULL;
-    std::string dir;
+    std::string path;
 
     // Fetch frame
     depth_image = k4a_capture_get_depth_image(capture);
@@ -235,8 +212,8 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_capture_t capture =
     }
 
     // Compute color point cloud by warping depth image into color camera geometry
-    dir = output_dir + "/depth2";
-    if (write_k4a_depth_frame(transformed_depth_image, &depth_tv, dir) == false)
+    path = get_output_path(output_dir + "/depth", &depth_tv);
+    if (write_k4a_depth_image(transformed_depth_image, path.c_str()) != 0)
     {
         printf("Failed to write depth frame (color view) @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
@@ -271,7 +248,6 @@ static int playback(char *input_path,
     k4a_result_t result;
     k4a_stream_result_t stream_result;
     uint64_t recording_length_usec;
-    uint64_t sampling_interval_usec = 100000; // 100[ms] = 10Hz
     uint64_t start_timestamp_usec, end_timestamp_usec;
     uint64_t k4a_timestamp = 0, k4a_timestamp_ = 0;
     struct timeval base_tv;
@@ -296,7 +272,11 @@ static int playback(char *input_path,
     start_timestamp_usec = (uint64_t)start_timestamp * 1000;
     if (debug == "--debug")
     {
-        end_timestamp_usec = start_timestamp_usec + sampling_interval_usec * 60;
+        end_timestamp_usec = start_timestamp_usec + 5 * 1000000; // 1 sec
+    }
+    else if (debug == "--debug-long")
+    {
+        end_timestamp_usec = start_timestamp_usec + 60 * 1000000; // 60 sec
     }
     else
     {
@@ -314,7 +294,7 @@ static int playback(char *input_path,
     }
 
     processing_start_time = time(NULL);
-    while (k4a_timestamp < recording_length_usec)
+    while (k4a_timestamp < end_timestamp_usec)
     {
         if (capture != NULL)
         {
@@ -357,6 +337,7 @@ static int playback(char *input_path,
             k4a_timestamp = k4a_timestamp_;
         }
 
+        cnt++;
         if (cnt % 100 == 0)
         {
             printf("TIME:  %.3lfs [Complete: %.3lfs / %.3lfs (%6.3lf%%), Elapsed Time: %lds]\n",
@@ -367,7 +348,6 @@ static int playback(char *input_path,
                        (double)(end_timestamp_usec - start_timestamp_usec) * 100,
                    time(NULL) - processing_start_time);
         }
-        cnt++;
     }
 
     returnCode = 0;

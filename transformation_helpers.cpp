@@ -11,7 +11,7 @@
 
 #include <vector>
 
-void tranformation_helpers_write_color_image(const k4a_image_t color_image, const char *file_name)
+int write_k4a_color_image(const k4a_image_t color_image, const char *path)
 {
     // Convert k4a_image_t to cv::Mat
     int width = k4a_image_get_width_pixels(color_image);
@@ -29,7 +29,8 @@ void tranformation_helpers_write_color_image(const k4a_image_t color_image, cons
             image.at<cv::Vec3b>(i, j)[2] = color_image_data[4 * idx + 2];
         }
     }
-    cv::imwrite(file_name, image);
+    cv::imwrite(path, image);
+    return 0;
 }
 
 /**
@@ -38,7 +39,7 @@ void tranformation_helpers_write_color_image(const k4a_image_t color_image, cons
  * @param depth_image 深度画像
  * @param file_name 保存するパス (e.g., ./outputs/sample.png)
  */
-void tranformation_helpers_write_depth_image(const k4a_image_t depth_image, const char *file_name)
+int write_k4a_depth_image(const k4a_image_t depth_image, const char *path)
 {
     // Convert k4a_image_t to cv::Mat
     int width = k4a_image_get_width_pixels(depth_image);
@@ -58,7 +59,8 @@ void tranformation_helpers_write_depth_image(const k4a_image_t depth_image, cons
         }
     }
 
-    cv::imwrite(file_name, image);
+    cv::imwrite(path, image);
+    return 0;
 }
 
 /**
