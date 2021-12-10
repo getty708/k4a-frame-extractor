@@ -18,12 +18,12 @@ else()
     find_package(OpenCV)
 endif ()
 
-add_executable(transformation_example 
-    main.cpp
-    transformation_helpers.cpp
-    transformation_helpers.h)
+add_executable(k4a_frame_extraction
+    k4a_frame_extraction.cpp
+    k4a_frame_extraction_helpers.cpp
+    k4a_frame_extraction_helpers.h)
 
-target_link_libraries(transformation_example PRIVATE
+target_link_libraries(k4a_frame_extraction PRIVATE
     k4a::k4a
     k4a::k4arecord
     /opt/libjpeg-turbo/lib64/libturbojpeg.so
