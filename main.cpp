@@ -6,15 +6,15 @@
 #include <string>
 #include "transformation_helpers.h"
 #include <filesystem>
+#include <time.h>
 namespace fs = std::filesystem;
 
 static std::string get_output_path(std::string output_dir, const struct timeval *tv)
 {
-    // uint64_t ts_msec, ts_sec, ts_min, ts_hour;
     uint64_t ts_usec, msec;
     time_t ts_unix;
     struct tm datetime;
-    std::string msec_str, sec_str, min_str, hour_str;
+    std::string msec_str;
 
     ts_unix = (time_t)tv->tv_sec;
     localtime_r(&ts_unix, &datetime);
@@ -51,18 +51,19 @@ static bool write_k4a_color_frame(k4a_transformation_t transformation_handle,
                                   const struct timeval *color_tv,
                                   std::string output_dir)
 {
-    std::string file_name_color = get_output_path(output_dir + "/color", color_tv);
-    tranformation_helpers_write_color_image(color_image, file_name_color.c_str());
+    std::string file_name = get_output_path(output_dir, color_tv);
+    // printf("PATH: %s\n", file_name.c_str());
+    tranformation_helpers_write_color_image(color_image, file_name.c_str());
 
     return true;
 }
 
 static bool write_k4a_depth_frame(const k4a_image_t depth_image, const struct timeval *depth_tv, std::string output_dir)
 {
-    std::string file_name_depth = get_output_path(output_dir, depth_tv);
-    // printf("Path[depth]: %s\n", file_name_depth.c_str());
-    // tranformation_helpers_write_depth_image(depth_image, file_name_depth.c_str());
-    tranformation_helpers_write_depth_image_3ch(depth_image, file_name_depth.c_str());
+    std::string file_name = get_output_path(output_dir, depth_tv);
+    // printf("Path[depth]: %s\n", file_name.c_str());
+    tranformation_helpers_write_depth_image(depth_image, file_name.c_str());
+    // tranformation_helpers_write_depth_image_3ch(depth_image, file_name.c_str());
 
     return true;
 }
@@ -79,6 +80,7 @@ static uint64_t extract_and_write_color_frame(k4a_capture_t capture = NULL,
     uint64_t color_ts = 0;
     timeval_delta tvd;
     struct timeval color_tv;
+    std::string dir;
 
     color_image = k4a_capture_get_color_image(capture);
     if (color_image == 0)
@@ -112,7 +114,8 @@ static uint64_t extract_and_write_color_frame(k4a_capture_t capture = NULL,
     }
 
     // Compute color point cloud by warping depth image into color camera geometry
-    if (write_k4a_color_frame(transformation, uncompressed_color_image, &color_tv, output_dir) == false)
+    dir = output_dir + "/color";
+    if (write_k4a_color_frame(transformation, uncompressed_color_image, &color_tv, dir) == false)
     {
         printf("Failed to write color frame\n");
         color_ts = 0;
@@ -255,7 +258,7 @@ ExitDCV:
 static int playback(char *input_path,
                     std::string base_datetime_str = "2020-01-01_00:00:00",
                     std::string output_dir = "./outputs",
-                    int start_timestamp = 10000,
+                    int start_timestamp = 1000,
                     std::string debug = "")
 {
     int returnCode = 1;
@@ -268,10 +271,11 @@ static int playback(char *input_path,
     k4a_stream_result_t stream_result;
     uint64_t recording_length_usec;
     uint64_t sampling_interval_usec = 100000; // 100[ms] = 10Hz
-    uint64_t start_timestamp_usec;
+    uint64_t start_timestamp_usec, end_timestamp_usec;
     uint64_t k4a_timestamp = 0, k4a_timestamp_ = 0;
     struct timeval base_tv;
     long cnt = 0;
+    time_t processing_start_time;
 
     printf("FUNC: playback\n");
     parse_base_timestamp(base_datetime_str, &base_tv);
@@ -291,17 +295,24 @@ static int playback(char *input_path,
     start_timestamp_usec = (uint64_t)start_timestamp * 1000;
     if (debug == "--debug")
     {
-        recording_length_usec = start_timestamp_usec + sampling_interval_usec * 60;
+        end_timestamp_usec = start_timestamp_usec + sampling_interval_usec * 60;
     }
+    else
+    {
+        end_timestamp_usec = recording_length_usec;
+    }
+    printf("Start Point: %.6lf [sec]\n", (double)start_timestamp_usec / 1000000.0);
+    printf("End   Point: %.6lf [sec]\n", (double)end_timestamp_usec / 1000000.0);
 
     // Seek for the closest capture to the start timestamp
-    result = k4a_playback_seek_timestamp(playback, start_timestamp, K4A_PLAYBACK_SEEK_BEGIN);
+    result = k4a_playback_seek_timestamp(playback, start_timestamp_usec, K4A_PLAYBACK_SEEK_BEGIN);
     if (result != K4A_RESULT_SUCCEEDED)
     {
         printf("Failed to seek start timestamp %d\n", start_timestamp);
         goto Exit;
     }
 
+    processing_start_time = time(NULL);
     while (k4a_timestamp < recording_length_usec)
     {
         if (capture != NULL)
@@ -353,12 +364,14 @@ static int playback(char *input_path,
             k4a_timestamp = k4a_timestamp_;
         }
 
-        if (cnt % 1000 == 0)
+        if (cnt % 100 == 0)
         {
-            printf("TIME: %.3lf / %.3lf (sec) [%6.3lf %%]\n",
+            printf("TIME:  %.3lfs [Complete: %.3lfs / %.3lfs (%6.3lf%%), Elapsed Time: %lds]\n",
                    (double)k4a_timestamp / 1000000.0,
-                   (double)recording_length_usec / 1000000,
-                   (double)k4a_timestamp / (double)recording_length_usec * 100);
+                   (double)(k4a_timestamp - start_timestamp_usec) / 1000000.0,
+                   (double)(end_timestamp_usec - start_timestamp_usec) / 1000000,
+                   (double)k4a_timestamp / (double)(end_timestamp_usec - start_timestamp_usec) * 100,
+                   time(NULL) - processing_start_time);
         }
         cnt++;
     }
