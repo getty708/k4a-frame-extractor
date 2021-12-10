@@ -272,7 +272,7 @@ static int playback(char *input_path,
     start_timestamp_usec = (uint64_t)start_timestamp * 1000;
     if (debug == "--debug")
     {
-        end_timestamp_usec = start_timestamp_usec + 5 * 1000000; // 1 sec
+        end_timestamp_usec = start_timestamp_usec + 10 * 1000000; // 1 sec
     }
     else if (debug == "--debug-long")
     {
@@ -371,7 +371,7 @@ Exit:
 static void print_usage()
 {
     printf("Usage: transformation_example <filename.mkv> [datetime: YYYY-mm-dd_HH:MM:SS] "
-           "[output_dir] [timestamp (ms)] [--debug]\n");
+           "[output_dir] [timestamp (ms)] [--debug|--debug-long]\n");
 }
 
 int main(int argc, char **argv)
