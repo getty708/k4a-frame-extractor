@@ -63,6 +63,12 @@ k4a_frame_extaction <filename.mkv> [datetime: YYYY-mm-dd_HH:MM:SS.fff] \
                     [output_dir] [start timestamp (ms)] [--debug|--debug-long]
 ```
 
+## Output File Format
+- color (RGB): JPEG (.jpg), 1920pt x 1080pt
+- depth: 16bit PNG (.png) 
+- depth2: 16bit (.png), 1920pt x 1080pt (color view)
+
+
 ## Style Guidelines
 We follow the coding style of [Azure-Kinect-Sensor-SDK](https://github.com/getty708/Azure-Kinect-Sensor-SDK/blob/develop/CONTRIBUTING.md#style-guidelines).
 
