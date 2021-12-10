@@ -9,7 +9,7 @@
 #include <time.h>
 namespace fs = std::filesystem;
 
-static std::string get_output_path(std::string output_dir, const struct timeval *tv)
+static std::string get_output_path(std::string output_dir, const struct timeval *tv, std::string ext = ".jpg")
 {
     uint64_t ts_usec, msec;
     time_t ts_unix;
@@ -36,7 +36,7 @@ static std::string get_output_path(std::string output_dir, const struct timeval 
     {
         msec_str = "0" + msec_str;
     }
-    std::string fname = std::string(buf) + "_" + msec_str + ".jpg";
+    std::string fname = std::string(buf) + "_" + msec_str + ext;
 
     // directory
     std::string dir = output_dir + "/" + mid_dir;
@@ -60,7 +60,7 @@ static bool write_k4a_color_frame(k4a_transformation_t transformation_handle,
 
 static bool write_k4a_depth_frame(const k4a_image_t depth_image, const struct timeval *depth_tv, std::string output_dir)
 {
-    std::string file_name = get_output_path(output_dir, depth_tv);
+    std::string file_name = get_output_path(output_dir, depth_tv, ".png");
     // printf("Path[depth]: %s\n", file_name.c_str());
     tranformation_helpers_write_depth_image(depth_image, file_name.c_str());
     // tranformation_helpers_write_depth_image_3ch(depth_image, file_name.c_str());

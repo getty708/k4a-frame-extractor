@@ -32,13 +32,18 @@ void tranformation_helpers_write_color_image(const k4a_image_t color_image, cons
     cv::imwrite(file_name, image);
 }
 
+/**
+ * @brief Depth画像を16bit PNGで保存する。
+ *
+ * @param depth_image 深度画像
+ * @param file_name 保存するパス (e.g., ./outputs/sample.png)
+ */
 void tranformation_helpers_write_depth_image(const k4a_image_t depth_image, const char *file_name)
 {
     // Convert k4a_image_t to cv::Mat
     int width = k4a_image_get_width_pixels(depth_image);
     int height = k4a_image_get_height_pixels(depth_image);
-    cv::Mat image(height, width, CV_8UC1);
-    // printf("w=%d, h=%d\n", width, height);
+    cv::Mat image(height, width, CV_16UC1);
 
     uint8_t *depth_image_data = k4a_image_get_buffer(depth_image);
     for (int i = 0; i < height; i++)
@@ -48,10 +53,8 @@ void tranformation_helpers_write_depth_image(const k4a_image_t depth_image, cons
             int idx = i * width + j;
             uint8_t val1 = depth_image_data[2 * idx];
             uint8_t val2 = depth_image_data[2 * idx + 1];
-            uint16_t val3 = (uint16_t)val1 + (uint16_t)val2 * 256;
-            // BUGFIX: Where does 5000 come from?
-            uint8_t val = ((float)val3 / 5000.0) * 256.;
-            image.at<uint8_t>(i, j) = val;
+            uint16_t val = (uint16_t)val1 + (uint16_t)val2 * 256;
+            image.at<uint16_t>(i, j) = val;
         }
     }
 
