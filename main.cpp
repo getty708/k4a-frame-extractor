@@ -9,6 +9,7 @@
 #include <time.h>
 namespace fs = std::filesystem;
 
+// FIXME: Rename function that include ``ADLTagger''.
 static std::string get_output_path(std::string output_dir, const struct timeval *tv, std::string ext = ".jpg")
 {
     uint64_t ts_usec, msec;
@@ -46,6 +47,7 @@ static std::string get_output_path(std::string output_dir, const struct timeval 
     return dir + "/" + fname;
 }
 
+// TODO: Marge into tranformation_helpers_write_color_image()
 static bool write_k4a_color_frame(k4a_transformation_t transformation_handle,
                                   const k4a_image_t color_image, // Uncompressed Image
                                   const struct timeval *color_tv,
@@ -58,6 +60,7 @@ static bool write_k4a_color_frame(k4a_transformation_t transformation_handle,
     return true;
 }
 
+// TODO: Marge into tranformation_helpers_write_depth_image()
 static bool write_k4a_depth_frame(const k4a_image_t depth_image, const struct timeval *depth_tv, std::string output_dir)
 {
     std::string file_name = get_output_path(output_dir, depth_tv, ".png");
@@ -182,7 +185,6 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_capture_t capture =
                                                          const struct timeval *base_tv = { 0 },
                                                          std::string output_dir = "outputs")
 {
-    // uint64_t return_code = 0;
     k4a_image_t depth_image = NULL;
     k4a_image_t color_image = NULL;
     uint64_t depth_ts = 0;
@@ -240,7 +242,6 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_capture_t capture =
         depth_ts = 0;
         goto ExitDCV;
     }
-    // return_code = 0;
 
 ExitDCV:
     if (depth_image != NULL)
