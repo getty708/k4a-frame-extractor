@@ -371,7 +371,8 @@ static int playback(char *input_path,
                    (double)k4a_timestamp / 1000000.0,
                    (double)(k4a_timestamp - start_timestamp_usec) / 1000000.0,
                    (double)(end_timestamp_usec - start_timestamp_usec) / 1000000,
-                   (double)k4a_timestamp / (double)(end_timestamp_usec - start_timestamp_usec) * 100,
+                   (double)(k4a_timestamp - start_timestamp_usec) /
+                       (double)(end_timestamp_usec - start_timestamp_usec) * 100,
                    time(NULL) - processing_start_time);
         }
         cnt++;
