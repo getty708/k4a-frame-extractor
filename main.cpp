@@ -65,7 +65,8 @@ static bool write_k4a_depth_frame(const k4a_image_t depth_image, const struct ti
 {
     std::string file_name_depth = get_output_path(output_dir, depth_tv);
     // printf("Path[depth]: %s\n", file_name_depth.c_str());
-    tranformation_helpers_write_depth_image(depth_image, file_name_depth.c_str());
+    // tranformation_helpers_write_depth_image(depth_image, file_name_depth.c_str());
+    tranformation_helpers_write_depth_image_3ch(depth_image, file_name_depth.c_str());
 
     return true;
 }
@@ -86,7 +87,7 @@ static int extract_and_write_color_frame(k4a_capture_t capture = NULL,
     color_image = k4a_capture_get_color_image(capture);
     if (color_image == 0)
     {
-        printf("Failed to get color image from capture\n");
+        printf("Failed to get color image from capture @extract_and_write_color_frame()\n");
         goto ExitC;
     }
     color_ts = k4a_image_get_device_timestamp_usec(color_image);
@@ -110,7 +111,7 @@ static int extract_and_write_color_frame(k4a_capture_t capture = NULL,
     }
     if (decompress_color_image(color_image, uncompressed_color_image) != 0)
     {
-        printf("Failed to decompress color image\n");
+        printf("Failed to decompress color image @extract_and_write_color_frame()\n");
         goto ExitC;
     }
 
@@ -151,7 +152,7 @@ static int extract_and_write_depth_frame(k4a_capture_t capture = NULL,
     depth_image = k4a_capture_get_depth_image(capture);
     if (depth_image == 0)
     {
-        printf("Failed to get depth image from capture\n");
+        printf("Failed to get depth image from capture @extract_and_write_depth_frame()\n");
         goto ExitD;
     }
     depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
@@ -163,7 +164,7 @@ static int extract_and_write_depth_frame(k4a_capture_t capture = NULL,
     dir = output_dir + "/depth";
     if (write_k4a_depth_frame(depth_image, &depth_tv, dir) == false)
     {
-        printf("Failed to transform depth to color\n");
+        printf("Failed to transform depth to color @extract_and_write_depth_frame()\n");
         goto ExitD;
     }
     return_code = 0;
@@ -196,7 +197,7 @@ static int extract_and_write_depth_frame_color_view(k4a_capture_t capture = NULL
     depth_image = k4a_capture_get_depth_image(capture);
     if (depth_image == 0)
     {
-        printf("Failed to get depth image from capture\n");
+        printf("Failed to get depth image from capture @extract_and_write_depth_frame_color_view()\n");
         goto ExitDCV;
     }
     depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
@@ -206,7 +207,7 @@ static int extract_and_write_depth_frame_color_view(k4a_capture_t capture = NULL
     color_image = k4a_capture_get_color_image(capture);
     if (color_image == 0)
     {
-        printf("Failed to get color image from capture\n");
+        printf("Failed to get color image from capture @extract_and_write_depth_frame_color_view()\n");
         goto ExitDCV;
     }
 
@@ -219,13 +220,13 @@ static int extract_and_write_depth_frame_color_view(k4a_capture_t capture = NULL
                                                  color_image_width_pixels * (int)sizeof(uint16_t),
                                                  &transformed_depth_image))
     {
-        printf("Failed to create transformed depth image\n");
+        printf("Failed to create transformed depth image @extract_and_write_depth_frame_color_view()\n");
         goto ExitDCV;
     }
     if (K4A_RESULT_SUCCEEDED !=
         k4a_transformation_depth_image_to_color_camera(transformation_handle, depth_image, transformed_depth_image))
     {
-        printf("Failed to transform depth to color\n");
+        printf("Failed to transform depth to color @extract_and_write_depth_frame_color_view()\n");
         goto ExitDCV;
     }
 
@@ -233,7 +234,7 @@ static int extract_and_write_depth_frame_color_view(k4a_capture_t capture = NULL
     dir = output_dir + "/depth2";
     if (write_k4a_depth_frame(transformed_depth_image, &depth_tv, dir) == false)
     {
-        printf("Failed to write depth frame (color view)\n");
+        printf("Failed to write depth frame (color view) @extract_and_write_depth_frame_color_view()\n");
         goto ExitDCV;
     }
     return_code = 0;
@@ -309,9 +310,12 @@ static int playback(char *input_path,
             printf("Failed to seek timestamp %ld\n", timestamp_usec);
             continue;
         }
-        if (cnt % (sampling_interval_usec * 100) == 0)
+        if (cnt % (sampling_interval_usec * 1000) == 0)
         {
-            printf("TIME: %ld / %ld (msec)\n", timestamp_usec / 1000, recording_length_usec / 1000);
+            printf("TIME: %ld / %ld (msec) [%.3lf]\n",
+                   timestamp_usec / 1000,
+                   recording_length_usec / 1000,
+                   (double)timestamp_usec / (double)recording_length_usec * 100);
         }
 
         stream_result = k4a_playback_get_next_capture(playback, &capture);
@@ -332,6 +336,8 @@ static int playback(char *input_path,
         extract_and_write_color_frame(capture, transformation, &base_tv, output_dir);
         extract_and_write_depth_frame(capture, transformation, &base_tv, output_dir);
         // extract_and_write_depth_frame_color_view(capture, transformation, &base_tv, output_dir);
+
+        cnt++;
     }
 
     returnCode = 0;
