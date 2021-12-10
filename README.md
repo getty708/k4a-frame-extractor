@@ -56,6 +56,12 @@ VS Code Extentions:
 - CMake
 - CMake Tools
 
+## Usage
+
+```
+Usage: k4a_frame_extaction <filename.mkv> [datetime: YYYY-mm-dd_HH:MM:SS.fff] \
+    [output_dir] [start timestamp (ms)] [--debug|--debug-long]
+```
 
 ## Style Guidelines
 We follow the coding style of [Azure-Kinect-Sensor-SDK](https://github.com/getty708/Azure-Kinect-Sensor-SDK/blob/develop/CONTRIBUTING.md#style-guidelines).
