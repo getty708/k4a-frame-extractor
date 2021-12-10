@@ -59,8 +59,8 @@ VS Code Extentions:
 ## Usage
 
 ```
-Usage: k4a_frame_extaction <filename.mkv> [datetime: YYYY-mm-dd_HH:MM:SS.fff] \
-    [output_dir] [start timestamp (ms)] [--debug|--debug-long]
+k4a_frame_extaction <filename.mkv> [datetime: YYYY-mm-dd_HH:MM:SS.fff] \
+                    [output_dir] [start timestamp (ms)] [--debug|--debug-long]
 ```
 
 ## Style Guidelines

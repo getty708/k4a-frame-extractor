@@ -140,7 +140,7 @@ static uint64_t extract_and_write_depth_frame(k4a_capture_t capture = NULL,
     add_timeval(base_tv, &tvd, &depth_tv);
 
     // Compute color point cloud by warping depth image into color camera geometry
-    path = get_output_path(output_dir + "/depth", &depth_tv);
+    path = get_output_path(output_dir + "/depth", &depth_tv, ".png");
     if (write_k4a_depth_image(depth_image, path.c_str()) != 0)
     {
         printf("Failed to transform depth to color @extract_and_write_depth_frame()\n");
@@ -212,7 +212,7 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_capture_t capture =
     }
 
     // Compute color point cloud by warping depth image into color camera geometry
-    path = get_output_path(output_dir + "/depth", &depth_tv);
+    path = get_output_path(output_dir + "/depth2", &depth_tv, ".png");
     if (write_k4a_depth_image(transformed_depth_image, path.c_str()) != 0)
     {
         printf("Failed to write depth frame (color view) @extract_and_write_depth_frame_color_view()\n");
@@ -332,6 +332,12 @@ static int playback(char *input_path,
         }
 
         k4a_timestamp_ = extract_and_write_depth_frame(capture, transformation, &base_tv, output_dir);
+        if (k4a_timestamp_ > k4a_timestamp)
+        {
+            k4a_timestamp = k4a_timestamp_;
+        }
+
+        k4a_timestamp_ = extract_and_write_depth_frame_color_view(capture, transformation, &base_tv, output_dir);
         if (k4a_timestamp_ > k4a_timestamp)
         {
             k4a_timestamp = k4a_timestamp_;
