@@ -346,21 +346,13 @@ static int playback(char *input_path,
         transformation = k4a_transformation_create(&calibration);
 
         k4a_timestamp_ = extract_and_write_color_frame(capture, transformation, &base_tv, output_dir);
-        if (k4a_timestamp_ == 0)
-        {
-            printf("@ %.3lf\n", (double)k4a_timestamp / 1000000.0);
-        }
-        else if (k4a_timestamp_ > k4a_timestamp)
+        if (k4a_timestamp_ > k4a_timestamp)
         {
             k4a_timestamp = k4a_timestamp_;
         }
 
         k4a_timestamp_ = extract_and_write_depth_frame(capture, transformation, &base_tv, output_dir);
-        if (k4a_timestamp_ == 0)
-        {
-            printf("@ %.3lf\n", (double)k4a_timestamp / 1000000.0);
-        }
-        else if (k4a_timestamp_ > k4a_timestamp)
+        if (k4a_timestamp_ > k4a_timestamp)
         {
             k4a_timestamp = k4a_timestamp_;
         }
