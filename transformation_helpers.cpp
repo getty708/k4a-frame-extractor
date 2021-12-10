@@ -79,14 +79,6 @@ void tranformation_helpers_write_depth_image_3ch(const k4a_image_t depth_image, 
     {
         for (int j = 0; j < width; j++)
         {
-            // int idx = i * width + j;
-            // uint8_t val1 = depth_image_data[2 * idx];
-            // uint8_t val2 = depth_image_data[2 * idx + 1];
-            // uint16_t val3 = (uint16_t)val1 + (uint16_t)val2 * 256;
-            // // BUGFIX: Where does 5000 come from?
-            // uint8_t val = ((float)val3 / 5000.0) * 256.;
-            // image.at<uint8_t>(i, j) = val;
-
             int idx = i * width + j;
             image.at<cv::Vec3b>(i, j)[0] = depth_image_data[2 * idx + 0];
             image.at<cv::Vec3b>(i, j)[1] = depth_image_data[2 * idx + 1];
