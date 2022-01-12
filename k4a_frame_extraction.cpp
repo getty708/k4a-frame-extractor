@@ -69,7 +69,7 @@ static uint64_t extract_and_write_color_frame(k4a_capture_t capture = NULL,
         goto ExitC;
     }
     color_ts = k4a_image_get_device_timestamp_usec(color_image);
-    to_timeval_delta(color_ts, &tvd);
+    to_timeval_delta(color_ts, &tvd, true);
     add_timeval(base_tv, &tvd, &color_tv);
 
     // Decompress Images
@@ -136,7 +136,7 @@ static uint64_t extract_and_write_depth_frame(k4a_capture_t capture = NULL,
         goto ExitD;
     }
     depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
-    to_timeval_delta(depth_ts, &tvd);
+    to_timeval_delta(depth_ts, &tvd, true);
     add_timeval(base_tv, &tvd, &depth_tv);
 
     // Compute color point cloud by warping depth image into color camera geometry
@@ -180,7 +180,7 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_capture_t capture =
         goto ExitDCV;
     }
     depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
-    to_timeval_delta(depth_ts, &tvd);
+    to_timeval_delta(depth_ts, &tvd, true);
     add_timeval(base_tv, &tvd, &depth_tv);
 
     color_image = k4a_capture_get_color_image(capture);

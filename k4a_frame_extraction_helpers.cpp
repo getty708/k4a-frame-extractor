@@ -145,15 +145,40 @@ int decompress_color_image(const k4a_image_t color_image, k4a_image_t uncompress
  */
 
 /**
+ * @brief Adjust timestamp delay caused by system.
+ *
+ * @param rel_ts {unit64_t} device time (= output of k4a_image_get_device_timestamp_usec). Note: this is not an absolute
+ * timestamp.
+ * @return fixed timestamp [us].
+ */
+uint64_t fix_timestamp_delay(const uint64_t rel_ts)
+{
+    // Compute offset
+    const uint64_t expected_delay = (uint64_t)(TS_ADJUST_SLOPE * (double)rel_ts);
+    uint64_t ts_fixed = rel_ts + expected_delay;
+
+    return ts_fixed;
+}
+
+/**
  * @brief  マイクロ秒を timval_delta に変換する.
+ *
+ * システム上のタイムスタンプの遅延を補正するためには、fix_delay=trueとする。
  *
  * @param ts {uint64_t} マイクロ秒
  * @param tvd {timeval_delta}
+ * @param fix_delay {bool} if true, offset will be added to fix sytem delay.
  */
-void to_timeval_delta(const uint64_t ts, timeval_delta *tvd)
+void to_timeval_delta(const uint64_t ts, timeval_delta *tvd, const bool fix_delay = true)
 {
-    tvd->tv_sec = (long)ts / (1000 * 1000);
-    tvd->tv_usec = (long)ts % (1000 * 1000);
+    uint64_t ts_ = ts;
+    if (fix_delay)
+    {
+        ts_ = fix_timestamp_delay(ts);
+    }
+
+    tvd->tv_sec = (long)ts_ / (1000 * 1000);
+    tvd->tv_usec = (long)ts_ % (1000 * 1000);
 }
 
 void add_timeval(const struct timeval *tv1, const struct timeval *tv2, struct timeval *tv_out)
