@@ -1,9 +1,12 @@
 # Kinect for Azure Frame Extractor
 Extract depth/color/IR frames from kinect recording (.mkv).
 
-## Install
+## Environment
 
-Environment: Ubuntu 18.04 Desktop
+- Ubuntu 18.04 Desktop
+- GeForce RTX 2070
+
+## Install
 
 Install kinect SDK:
 
