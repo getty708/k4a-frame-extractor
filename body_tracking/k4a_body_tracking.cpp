@@ -6,6 +6,8 @@
 #include <k4arecord/playback.h>
 #include <k4abt.h>
 
+#include "k4a_body_tracking_helpers.h"
+
 #define VERIFY(result, error)                                                                                          \
     if (result != K4A_RESULT_SUCCEEDED)                                                                                \
     {                                                                                                                  \
@@ -15,27 +17,10 @@
 
 int main()
 {
-    // k4a_device_t device = NULL;
-    // VERIFY(k4a_device_open(0, &device), "Open K4A Device failed!");
-
-    // // Start camera. Make sure depth camera is enabled.
-    // k4a_device_configuration_t deviceConfig = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
-    // deviceConfig.depth_mode = K4A_DEPTH_MODE_NFOV_UNBINNED;
-    // deviceConfig.color_resolution = K4A_COLOR_RESOLUTION_OFF;
-    // VERIFY(k4a_device_start_cameras(device, &deviceConfig), "Start K4A cameras failed!");
-
-    // k4a_calibration_t sensor_calibration;
-    // VERIFY(k4a_device_get_calibration(device,
-    //                                   deviceConfig.depth_mode,
-    //                                   deviceConfig.color_resolution,
-    //                                   &sensor_calibration),
-    //        "Get depth camera calibration failed!");
-
     // Open Recorded file (*.kvm)
     int returnCode = 1;
     k4a_playback_t playback = NULL;
     k4a_calibration_t calibration;
-    // k4a_transformation_t transformation = NULL;
     k4a_capture_t capture = NULL;
     k4a_result_t result;
     k4a_stream_result_t stream_result;
@@ -46,7 +31,6 @@ int main()
 
     // User Params
     uint64_t start_timestamp_usec = 1000;
-    // std::string input_path = "./data/sample.mkv";
     const char *input_path = "../data/sample.mkv";
 
     // Open playback (.mkv)
@@ -114,26 +98,12 @@ int main()
         printf("%zu bodies are detected!\n", num_bodies);
 
         // === Custom Processing ==
-        for (size_t i = 0; i < num_bodies; i++)
+        for (size_t body_index = 0; body_index < num_bodies; body_index++)
         {
             k4abt_skeleton_t skeleton;
-            k4abt_frame_get_body_skeleton(body_frame, i, &skeleton);
-            uint32_t id = k4abt_frame_get_body_id(body_frame, i);
-
-            // Check the contains of skeleton
-            float xyz[3] = { 0, 0, 0 };
-            float v[3] = { 0, 0, 0 };
-            printf("body ID: %d\n", id);
-            for (size_t j = 0; j < 33; j++)
-            {
-                xyz[0] = skeleton.joints[j].position.xyz.x;
-                xyz[1] = skeleton.joints[j].position.xyz.y;
-                xyz[2] = skeleton.joints[j].position.xyz.z;
-                std::cout << "== " << j << " ==" << std::endl;
-                std::cout << "xyz:" << xyz[0] << ", " << xyz[1] << ", " << xyz[2] << ", " << std::endl;
-                std::cout << "v  :" << skeleton.joints[j].position.v[0] << ", " << skeleton.joints[j].position.v[1]
-                          << ", " << skeleton.joints[j].position.v[2] << std::endl;
-            }
+            k4abt_frame_get_body_skeleton(body_frame, body_index, &skeleton);
+            uint32_t id = k4abt_frame_get_body_id(body_frame, body_index);
+            write_row_of_skeleton_joint(start_timestamp_usec, body_index, skeleton.joints);
         }
 
         k4abt_frame_release(body_frame); // Remember to release the body frame once you finish using it
