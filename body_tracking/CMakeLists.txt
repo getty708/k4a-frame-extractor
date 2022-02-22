@@ -12,6 +12,8 @@ find_package(k4arecord)
 
 add_executable(k4a_body_tracking
     k4a_body_tracking.cpp
+    k4a_body_tracking_helpers.cpp
+    k4a_body_tracking_helpers.h
     )
 
 target_link_libraries(k4a_body_tracking PRIVATE
