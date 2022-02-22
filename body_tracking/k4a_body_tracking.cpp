@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <fstream>
 #include <unistd.h>
 
 #include <k4a/k4a.h>
@@ -12,7 +13,7 @@
 // Global Variable
 k4a_playback_t playback = NULL;
 
-uint64_t process_single_frame(const struct timeval *base_tv = { 0 })
+uint64_t process_single_frame(const struct timeval *base_tv = { 0 }, std::ofstream ostrm)
 {
     k4a_capture_t capture = NULL;
     k4a_stream_result_t stream_result;
@@ -116,9 +117,10 @@ int playback_handler(std::string base_datetime_str = "2020-01-01_00:00:00.000",
                      std::string debug = "")
 {
     const char *input_path = getenv("K4ABT_INPUT_PATH");
-    const std::string output_dir = getenv("K4ABT_OUTPUT_DIR");
+    const std::string output_fname = getenv("K4ABT_OUTPUT_DIR");
     std::cout << "Input       : " << input_path << std::endl;
-    std::cout << "Output      : " << output_dir << std::endl;
+    std::cout << "Output      : " << output_fname << std::endl;
+    // std::ofstream ostrm(output_fname, std::ios::binary);
 
     int returnCode = 1;
     k4a_result_t result;
