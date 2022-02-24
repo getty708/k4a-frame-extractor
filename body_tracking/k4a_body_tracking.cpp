@@ -164,6 +164,7 @@ int playback_handler(std::string base_datetime_str = "2020-01-01_00:00:00.000",
         printf("cannot create new file stream.\n");
         return 1;
     }
+    write_csv_header_row();
 
     printf("FUNC        : playback\n");
     parse_base_timestamp(base_datetime_str, &base_tv);
