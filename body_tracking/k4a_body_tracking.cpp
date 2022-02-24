@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
+#include <iomanip>
 
 #include <k4a/k4a.h>
 #include <k4arecord/playback.h>
@@ -12,24 +13,19 @@
 
 // Global Variable
 k4a_playback_t playback = NULL;
+k4abt_tracker_t tracker = NULL;
 
-uint64_t process_single_frame(const struct timeval *base_tv = { 0 })
+int init_body_tracker()
 {
+    k4a_result_t result;
     k4a_capture_t capture = NULL;
     k4a_stream_result_t stream_result;
     k4a_calibration_t calibration;
-    k4a_wait_result_t queue_capture_result;
-    k4a_wait_result_t pop_frame_result;
-    k4a_result_t result;
 
-    k4abt_tracker_t tracker = NULL;
     k4abt_tracker_configuration_t tracker_config = K4ABT_TRACKER_CONFIG_DEFAULT;
     k4abt_frame_t body_frame = NULL;
 
-    uint64_t color_ts;
-    struct timeval tv;
-
-    // get a next frame
+    // get a first frame
     stream_result = k4a_playback_get_next_capture(playback, &capture);
     if (stream_result == K4A_STREAM_RESULT_EOF)
     {
@@ -49,16 +45,55 @@ uint64_t process_single_frame(const struct timeval *base_tv = { 0 })
         return 1;
     }
 
-    // get timestamp of corresponding freame
-    color_ts = get_color_frame_timestamp(capture, base_tv, &tv);
-
     // Create body tracker
     result = k4abt_tracker_create(&calibration, tracker_config, &tracker);
     if (K4A_RESULT_SUCCEEDED != k4abt_tracker_create(&calibration, tracker_config, &tracker))
     {
         printf("Failed to create body tracker\n");
-        return color_ts;
+        return 1;
     }
+
+    printf("Succeeded in initializing the body tracker.\n");
+    return 0;
+}
+
+int finalize_body_tracker()
+{
+    k4abt_tracker_shutdown(tracker);
+    k4abt_tracker_destroy(tracker);
+    printf("Succeeded in destroying the body tracker.\n");
+    return 0;
+}
+
+uint64_t process_single_frame(const struct timeval *base_tv = { 0 })
+{
+    k4a_capture_t capture = NULL;
+    k4a_stream_result_t stream_result;
+    k4a_calibration_t calibration;
+    k4a_wait_result_t queue_capture_result;
+    k4a_wait_result_t pop_frame_result;
+    k4a_result_t result;
+
+    k4abt_frame_t body_frame = NULL;
+
+    uint64_t color_ts;
+    struct timeval tv;
+
+    // get a next frame
+    stream_result = k4a_playback_get_next_capture(playback, &capture);
+    if (stream_result == K4A_STREAM_RESULT_EOF)
+    {
+        printf("Reached to EOF!!\n");
+        return 1;
+    }
+    else if (stream_result != K4A_STREAM_RESULT_SUCCEEDED || capture == NULL)
+    {
+        printf("Failed to fetch frame\n");
+        return 1;
+    }
+
+    // get timestamp of corresponding freame (color_ts, tv)
+    color_ts = get_color_frame_timestamp(capture, base_tv, &tv);
 
     // run body tracking
     queue_capture_result = k4abt_tracker_enqueue_capture(tracker, capture, K4A_WAIT_INFINITE);
@@ -81,7 +116,6 @@ uint64_t process_single_frame(const struct timeval *base_tv = { 0 })
     {
         // Successfully popped the body tracking result. Start your processing
         size_t num_bodies = k4abt_frame_get_num_bodies(body_frame);
-        printf("%zu bodies are detected!\n", num_bodies);
 
         // === Custom Processing ==
         for (size_t body_index = 0; body_index < num_bodies; body_index++)
@@ -104,11 +138,7 @@ uint64_t process_single_frame(const struct timeval *base_tv = { 0 })
         printf("Pop body frame result failed!\n");
         return color_ts;
     }
-    printf("Finished body tracking processing!\n");
 
-    // Clean up
-    k4abt_tracker_shutdown(tracker);
-    k4abt_tracker_destroy(tracker);
     return color_ts;
 }
 
@@ -117,9 +147,7 @@ int playback_handler(std::string base_datetime_str = "2020-01-01_00:00:00.000",
                      std::string debug = "")
 {
     const char *input_path = getenv("K4ABT_INPUT_PATH");
-    // const std::string output_fname = getenv("K4ABT_OUTPUT_DIR");
     std::cout << "Input       : " << input_path << std::endl;
-    // std::cout << "Output      : " << output_fname << std::endl;
 
     int returnCode = 1;
     k4a_result_t result;
@@ -177,18 +205,34 @@ int playback_handler(std::string base_datetime_str = "2020-01-01_00:00:00.000",
         return 1;
     }
 
+    init_body_tracker();
+
     processing_start_time = time(NULL);
     while (k4a_timestamp < end_timestamp_usec)
     {
+
         k4a_timestamp = process_single_frame(&base_tv);
         if (k4a_timestamp < 0)
         {
             printf("error occured at process_single_frame() with code %ld.\n", k4a_timestamp);
             return 1;
         }
-        std::cout << "TS: " << k4a_timestamp << ", " << end_timestamp_usec << std::endl;
+
+        if (cnt % 1000 == 0)
+        {
+            const double progress = (double)(k4a_timestamp - start_timestamp_usec) /
+                                    (double)(end_timestamp_usec - start_timestamp_usec) * 100.0;
+            const double elapsed_time = ((double)time(NULL) - (double)processing_start_time) / 60.0;
+
+            std::cout << "[TIME: " << std::setprecision(3) << std::fixed << elapsed_time << " min] ";
+            std::cout << cnt << " frames finised!";
+            std::cout << "(" << progress << "%, " << k4a_timestamp << " / " << end_timestamp_usec << "[us])"
+                      << std::endl;
+        }
+        cnt++;
     }
 
+    finalize_body_tracker();
     close_output_file_stream();
     return 0;
 }
