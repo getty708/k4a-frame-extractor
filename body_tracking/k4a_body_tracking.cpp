@@ -13,7 +13,7 @@
 // Global Variable
 k4a_playback_t playback = NULL;
 
-uint64_t process_single_frame(const struct timeval *base_tv = { 0 }, std::ofstream ostrm)
+uint64_t process_single_frame(const struct timeval *base_tv = { 0 })
 {
     k4a_capture_t capture = NULL;
     k4a_stream_result_t stream_result;
@@ -117,10 +117,9 @@ int playback_handler(std::string base_datetime_str = "2020-01-01_00:00:00.000",
                      std::string debug = "")
 {
     const char *input_path = getenv("K4ABT_INPUT_PATH");
-    const std::string output_fname = getenv("K4ABT_OUTPUT_DIR");
+    // const std::string output_fname = getenv("K4ABT_OUTPUT_DIR");
     std::cout << "Input       : " << input_path << std::endl;
-    std::cout << "Output      : " << output_fname << std::endl;
-    // std::ofstream ostrm(output_fname, std::ios::binary);
+    // std::cout << "Output      : " << output_fname << std::endl;
 
     int returnCode = 1;
     k4a_result_t result;
@@ -130,6 +129,13 @@ int playback_handler(std::string base_datetime_str = "2020-01-01_00:00:00.000",
 
     long cnt = 0;
     time_t processing_start_time;
+
+    // init output stream
+    if (init_output_file_stream() != 0)
+    {
+        printf("cannot create new file stream.\n");
+        return 1;
+    }
 
     printf("FUNC        : playback\n");
     parse_base_timestamp(base_datetime_str, &base_tv);
@@ -183,6 +189,7 @@ int playback_handler(std::string base_datetime_str = "2020-01-01_00:00:00.000",
         std::cout << "TS: " << k4a_timestamp << ", " << end_timestamp_usec << std::endl;
     }
 
+    close_output_file_stream();
     return 0;
 }
 

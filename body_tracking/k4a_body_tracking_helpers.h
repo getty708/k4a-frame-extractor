@@ -1,11 +1,14 @@
 #pragma once
+
 #include <k4a/k4a.h>
 #include <k4abt.h>
 typedef timeval timeval_delta;
 
 #define TS_ADJUST_SLOPE 0.00042629 // [us/us]
 
-// #define K4ABT_NUM_KEYPOINTS 33
+// I/O Utils
+int init_output_file_stream();
+int close_output_file_stream();
 int write_row_of_skeleton_joint(const struct timeval *tv, size_t body_index, k4abt_joint_t *joints);
 
 // Timestamp
