@@ -59,7 +59,7 @@ int write_csv_header_row()
 int write_row_of_skeleton_joint(const struct timeval *tv, size_t body_index, k4abt_joint_t *joints)
 {
     // ostrm << tv->tv_sec << "." << tv->tv_usec;
-    ostrm << tv->tv_sec << "." << std::setfill('0') << tv->tv_usec;
+    ostrm << tv->tv_sec << "." << std::setw(6) << std::setfill('0') << tv->tv_usec;
 
     ostrm << "," << body_index;
     for (size_t i = 0; i < K4ABT_JOINT_COUNT; i++)
