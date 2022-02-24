@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 
 #include "k4a_body_tracking_helpers.h"
@@ -32,24 +33,49 @@ int close_output_file_stream()
     return 0;
 }
 
-int write_row_of_skeleton_joint(const struct timeval *tv, size_t body_index, k4abt_joint_t *joints)
+int write_csv_header_row()
 {
-    ostrm << tv->tv_sec << ", " << tv->tv_usec;
-    ostrm << ", " << body_index;
+    ostrm << "timestamp";
+    ostrm << ",body_index";
     for (size_t i = 0; i < K4ABT_JOINT_COUNT; i++)
     {
         // position
         for (size_t j = 0; j < 3; j++)
         {
-            ostrm << ", " << joints[i].position.v[j];
+            ostrm << ",J" << std::setw(2) << std::setfill('0') << i << "_P" << j;
         }
         // orioentation
         for (size_t j = 0; j < 4; j++)
         {
-            ostrm << ", " << joints[i].orientation.v[j];
+            ostrm << ",J" << std::setw(2) << std::setfill('0') << i << "_O" << j;
         }
         // confidence_level
-        ostrm << ", " << joints[i].confidence_level;
+        ostrm << ",J" << std::setw(2) << std::setfill('0') << i << "_CONF";
+    }
+    ostrm << std::endl;
+    return 0;
+}
+
+int write_row_of_skeleton_joint(const struct timeval *tv, size_t body_index, k4abt_joint_t *joints)
+{
+    // ostrm << tv->tv_sec << "." << tv->tv_usec;
+    ostrm << tv->tv_sec << "." << std::setfill('0') << tv->tv_usec;
+
+    ostrm << "," << body_index;
+    for (size_t i = 0; i < K4ABT_JOINT_COUNT; i++)
+    {
+        // position
+        for (size_t j = 0; j < 3; j++)
+        {
+            ostrm << "," << joints[i].position.v[j];
+        }
+        // orioentation
+        for (size_t j = 0; j < 4; j++)
+        {
+            ostrm << "," << joints[i].orientation.v[j];
+        }
+        // confidence_level
+        ostrm << "," << joints[i].confidence_level;
     }
 
     ostrm << std::endl;
