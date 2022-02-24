@@ -167,5 +167,6 @@ uint64_t get_color_frame_timestamp(k4a_capture_t capture = NULL,
     add_timeval(base_tv, &tvd, tv);
 
     k4a_image_release(color_image);
+
     return color_ts;
 }
