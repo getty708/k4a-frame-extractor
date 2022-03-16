@@ -116,6 +116,10 @@ uint64_t process_single_frame(const struct timeval *base_tv = { 0 })
     {
         // Successfully popped the body tracking result. Start your processing
         size_t num_bodies = k4abt_frame_get_num_bodies(body_frame);
+        // if (num_bodies != 1)
+        // {
+        //     std::cout << "[WARNING] " << num_bodies << " bodyies are detected." << std::endl;
+        // }
 
         // === Custom Processing ==
         for (size_t body_index = 0; body_index < num_bodies; body_index++)
