@@ -365,6 +365,13 @@ static int playback_cmd_handler(char *input_path,
                    time(NULL) - processing_start_time);
         }
     }
+    printf("Finish!\n");
+    printf("TIME:  %.3lfs [Complete: %.3lfs / %.3lfs (%6.3lf%%), Elapsed Time: %lds]\n",
+           (double)k4a_timestamp / 1000000.0,
+           (double)(k4a_timestamp - start_timestamp_usec) / 1000000.0,
+           (double)(end_timestamp_usec - start_timestamp_usec) / 1000000,
+           (double)(k4a_timestamp - start_timestamp_usec) / (double)(end_timestamp_usec - start_timestamp_usec) * 100,
+           time(NULL) - processing_start_time);
 
     returnCode = 0;
 
@@ -372,10 +379,6 @@ Exit:
     if (playback != NULL)
     {
         k4a_playback_close(playback);
-    }
-    if (capture != NULL)
-    {
-        k4a_capture_release(capture);
     }
     return returnCode;
 }
