@@ -11,7 +11,6 @@
 
 #include "k4a_body_tracking_helpers.h"
 
-// Global Variable
 k4a_playback_t playback = NULL;
 k4abt_tracker_t tracker = NULL;
 
