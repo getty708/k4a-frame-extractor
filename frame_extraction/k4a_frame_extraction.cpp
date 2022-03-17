@@ -9,6 +9,10 @@
 #include <time.h>
 namespace fs = std::filesystem;
 
+k4a_playback_t playback = NULL;
+k4a_capture_t capture = NULL;
+k4a_transformation_t transformation = NULL;
+
 // FIXME: Rename function that include ``ADLTagger''.
 static std::string get_output_path(std::string output_dir, const struct timeval *tv, std::string ext = ".jpg")
 {
@@ -48,10 +52,7 @@ static std::string get_output_path(std::string output_dir, const struct timeval 
 }
 
 // Extract frame at a given timestamp [us] and save file.
-static uint64_t extract_and_write_color_frame(k4a_capture_t capture = NULL,
-                                              k4a_transformation_t transformation = NULL,
-                                              const struct timeval *base_tv = { 0 },
-                                              std::string output_dir = "outputs")
+static uint64_t extract_and_write_color_frame(const struct timeval *base_tv = { 0 }, std::string output_dir = "outputs")
 {
     // int return_code = 1;
     k4a_image_t color_image = NULL;
@@ -115,10 +116,7 @@ ExitC:
 }
 
 // Extract frame at a given timestamp [us] and save file.
-static uint64_t extract_and_write_depth_frame(k4a_capture_t capture = NULL,
-                                              k4a_transformation_t transformation = NULL,
-                                              const struct timeval *base_tv = { 0 },
-                                              std::string output_dir = "outputs")
+static uint64_t extract_and_write_depth_frame(const struct timeval *base_tv = { 0 }, std::string output_dir = "outputs")
 {
     // int return_code = 1;
     k4a_image_t depth_image = NULL;
@@ -157,9 +155,7 @@ ExitD:
 }
 
 // Extract frame at a given timestamp [us] and save file.
-static uint64_t extract_and_write_depth_frame_color_view(k4a_capture_t capture = NULL,
-                                                         k4a_transformation_t transformation_handle = NULL,
-                                                         const struct timeval *base_tv = { 0 },
+static uint64_t extract_and_write_depth_frame_color_view(const struct timeval *base_tv = { 0 },
                                                          std::string output_dir = "outputs")
 {
     k4a_image_t depth_image = NULL;
@@ -204,7 +200,7 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_capture_t capture =
         goto ExitDCV;
     }
     if (K4A_RESULT_SUCCEEDED !=
-        k4a_transformation_depth_image_to_color_camera(transformation_handle, depth_image, transformed_depth_image))
+        k4a_transformation_depth_image_to_color_camera(transformation, depth_image, transformed_depth_image))
     {
         printf("Failed to transform depth to color @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
@@ -233,17 +229,16 @@ ExitDCV:
 }
 
 // Timestamp in milliseconds. Defaults to 1 sec as the first couple frames don't contain color
-static int playback(char *input_path,
-                    std::string base_datetime_str = "2020-01-01_00:00:00",
-                    std::string output_dir = "./outputs",
-                    int start_timestamp = 1000,
-                    std::string debug = "")
+static int playback_cmd_handler(char *input_path,
+                                std::string base_datetime_str = "2020-01-01_00:00:00",
+                                std::string output_dir = "./outputs",
+                                int start_timestamp = 1000,
+                                std::string debug = "")
 {
     int returnCode = 1;
-    k4a_playback_t playback = NULL;
     k4a_calibration_t calibration;
-    k4a_transformation_t transformation = NULL;
-    k4a_capture_t capture = NULL;
+    // k4a_transformation_t transformation = NULL;
+    // k4a_capture_t capture = NULL;
 
     k4a_result_t result;
     k4a_stream_result_t stream_result;
@@ -293,6 +288,13 @@ static int playback(char *input_path,
         goto Exit;
     }
 
+    // // Get calibration variables.
+    // if (K4A_RESULT_SUCCEEDED != k4a_playback_get_calibration(playback, &calibration))
+    // {
+    //     printf("Failed to get calibration\n");
+    // }
+    // print_k4a_calibration_t(&calibration);
+
     processing_start_time = time(NULL);
     while (k4a_timestamp < end_timestamp_usec)
     {
@@ -322,22 +324,26 @@ static int playback(char *input_path,
             printf("Failed to get calibration\n");
             continue;
         }
+        // DEBUG: -
+        // printf("------\n");
+        // print_k4a_calibration_t(&calibration);
+        // printf("\n");
 
         transformation = k4a_transformation_create(&calibration);
 
-        k4a_timestamp_ = extract_and_write_color_frame(capture, transformation, &base_tv, output_dir);
+        k4a_timestamp_ = extract_and_write_color_frame(&base_tv, output_dir);
         if (k4a_timestamp_ > k4a_timestamp)
         {
             k4a_timestamp = k4a_timestamp_;
         }
 
-        k4a_timestamp_ = extract_and_write_depth_frame(capture, transformation, &base_tv, output_dir);
+        k4a_timestamp_ = extract_and_write_depth_frame(&base_tv, output_dir);
         if (k4a_timestamp_ > k4a_timestamp)
         {
             k4a_timestamp = k4a_timestamp_;
         }
 
-        k4a_timestamp_ = extract_and_write_depth_frame_color_view(capture, transformation, &base_tv, output_dir);
+        k4a_timestamp_ = extract_and_write_depth_frame_color_view(&base_tv, output_dir);
         if (k4a_timestamp_ > k4a_timestamp)
         {
             k4a_timestamp = k4a_timestamp_;
@@ -392,19 +398,19 @@ int main(int argc, char **argv)
     {
         if (argc == 3)
         {
-            returnCode = playback(argv[1], argv[2]);
+            returnCode = playback_cmd_handler(argv[1], argv[2]);
         }
         if (argc == 4)
         {
-            returnCode = playback(argv[1], argv[2], argv[3]);
+            returnCode = playback_cmd_handler(argv[1], argv[2], argv[3]);
         }
         else if (argc == 5)
         {
-            returnCode = playback(argv[1], argv[2], argv[3], atoi(argv[4]));
+            returnCode = playback_cmd_handler(argv[1], argv[2], argv[3], atoi(argv[4]));
         }
         else if (argc == 6)
         {
-            returnCode = playback(argv[1], argv[2], argv[3], atoi(argv[4]), argv[5]);
+            returnCode = playback_cmd_handler(argv[1], argv[2], argv[3], atoi(argv[4]), argv[5]);
         }
         else
         {

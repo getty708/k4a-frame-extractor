@@ -15,3 +15,5 @@ int decompress_color_image(const k4a_image_t color_image, k4a_image_t uncompress
 void to_timeval_delta(const uint64_t ts, timeval_delta *tvd, const bool fix_delay);
 void add_timeval(const struct timeval *tv1, const struct timeval *tv2, struct timeval *tv_out);
 int parse_base_timestamp(std::string base_datetime_str, struct timeval *base_tv);
+
+void print_k4a_calibration_t(k4a_calibration_t *calibration);

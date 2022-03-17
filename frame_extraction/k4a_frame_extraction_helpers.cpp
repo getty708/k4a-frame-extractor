@@ -235,3 +235,49 @@ int parse_base_timestamp(std::string base_datetime_str, struct timeval *base_tv)
     base_tv->tv_usec = msec * 1000;
     return 0;
 }
+
+/**
+ * ====================================================================================
+ *   print
+ * ====================================================================================
+ */
+void print_k4a_calibration_camera_t(k4a_calibration_camera_t *camera)
+{
+    printf("  - extrinsics:\n");
+    printf("    - rotation=[\n");
+    for (size_t i = 0; i < 3; i++)
+    {
+        printf("      [%f, %f, %f]\n",
+               camera->extrinsics.rotation[i * 3],
+               camera->extrinsics.rotation[i * 3 + 1],
+               camera->extrinsics.rotation[i * 3 + 2]);
+    }
+    printf("    ],\n");
+    printf("    - translation=[%f, %f, %f],\n",
+           camera->extrinsics.translation[0],
+           camera->extrinsics.translation[1],
+           camera->extrinsics.translation[2]);
+
+    printf("  - intrinsics={type: %d, parameter_count: %d}\n",
+           camera->intrinsics.type,
+           camera->intrinsics.parameter_count);
+    printf("    - type: %d\n", camera->intrinsics.type);
+    printf("    - parameter_count: %d\n", camera->intrinsics.parameter_count);
+
+    printf("  - resolution_width: %d\n", camera->resolution_width);
+    printf("  - resolution_height: %d\n", camera->resolution_height);
+    printf("  - metric_radius: %f\n", camera->metric_radius);
+}
+
+void print_k4a_calibration_t(k4a_calibration_t *calibration)
+{
+    printf("calibation:\n");
+    printf("- depth_camera_calibration:\n");
+    print_k4a_calibration_camera_t(&(calibration->depth_camera_calibration));
+
+    printf("- color_camera_calibration:\n");
+    print_k4a_calibration_camera_t(&(calibration->color_camera_calibration));
+
+    printf("- depth_mode: %d\n", calibration->depth_mode);
+    printf("- color_resolution: %d\n", calibration->color_resolution);
+}
