@@ -61,7 +61,7 @@ static uint64_t extract_and_write_color_frame(const struct timeval *base_tv = { 
     if (color_image == 0)
     {
         printf("Failed to get color image from capture @extract_and_write_color_frame()\n");
-        goto ExitC;
+        goto ExitColor;
     }
     color_ts = k4a_image_get_device_timestamp_usec(color_image);
     to_timeval_delta(color_ts, &tvd, true);
@@ -79,13 +79,13 @@ static uint64_t extract_and_write_color_frame(const struct timeval *base_tv = { 
     {
         printf("Failed to create image buffer\n");
         color_ts = 0;
-        return 1;
+        goto ExitColor;
     }
     if (decompress_color_image(color_image, uncompressed_color_image) != 0)
     {
         printf("Failed to decompress color image @extract_and_write_color_frame()\n");
         color_ts = 0;
-        goto ExitC;
+        goto ExitColor;
     }
 
     path = get_output_path(output_dir + "/color", &color_tv);
@@ -93,10 +93,10 @@ static uint64_t extract_and_write_color_frame(const struct timeval *base_tv = { 
     {
         printf("Failed to write color frame\n");
         color_ts = 0;
-        goto ExitC;
+        goto ExitColor;
     }
 
-ExitC:
+ExitColor:
     if (color_image != NULL)
     {
         k4a_image_release(color_image);
@@ -111,7 +111,6 @@ ExitC:
 // Extract frame at a given timestamp [us] and save file.
 static uint64_t extract_and_write_depth_frame(const struct timeval *base_tv = { 0 }, std::string output_dir = "outputs")
 {
-    // int return_code = 1;
     k4a_image_t depth_image = NULL;
     uint64_t depth_ts = 0;
     timeval_delta tvd;
@@ -123,7 +122,7 @@ static uint64_t extract_and_write_depth_frame(const struct timeval *base_tv = { 
     {
         printf("Failed to get depth image from capture @extract_and_write_depth_frame()\n");
         depth_ts = 0;
-        k4a_image_release(depth_image);
+        goto ExitDepth;
     }
     depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
     to_timeval_delta(depth_ts, &tvd, true);
@@ -134,8 +133,10 @@ static uint64_t extract_and_write_depth_frame(const struct timeval *base_tv = { 
     {
         printf("Failed to transform depth to color @extract_and_write_depth_frame()\n");
         depth_ts = 0;
+        goto ExitDepth;
     }
 
+ExitDepth:
     if (depth_image != NULL)
     {
         k4a_image_release(depth_image);
@@ -190,20 +191,15 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
                                                  &transformed_depth_image))
     {
         printf("Failed to create transformed depth image @extract_and_write_depth_frame_color_view()\n");
-        k4a_image_release(depth_image);
-        k4a_image_release(color_image);
-        k4a_image_release(transformed_depth_image);
-        return depth_ts;
+        depth_ts = 0;
+        goto ExitDepth2;
     }
     if (K4A_RESULT_SUCCEEDED !=
         k4a_transformation_depth_image_to_color_camera(transformation, depth_image, transformed_depth_image))
     {
         printf("Failed to transform depth to color @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
-        k4a_image_release(depth_image);
-        k4a_image_release(color_image);
-        k4a_image_release(transformed_depth_image);
-        return depth_ts;
+        goto ExitDepth2;
     }
 
     // Compute color point cloud by warping depth image into color camera geometry
@@ -212,8 +208,10 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
     {
         printf("Failed to write depth frame (color view) @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
+        goto ExitDepth2;
     }
 
+ExitDepth2:
     if (depth_image != NULL)
     {
         k4a_image_release(depth_image);
@@ -299,7 +297,6 @@ static int playback_cmd_handler(char *input_path,
     k4a_result_t result;
     k4a_stream_result_t stream_result;
     uint64_t recording_length_usec, start_timestamp_usec, end_timestamp_usec, k4a_timestamp = 0;
-    // uint64_t k4a_timestamp = 0;
     struct timeval base_tv;
     long cnt = 0;
     time_t processing_start_time;
@@ -360,6 +357,13 @@ static int playback_cmd_handler(char *input_path,
                    time(NULL) - processing_start_time);
         }
     }
+    printf("--- Finish! ---\n");
+    printf("TIME:  %.3lfs [Complete: %.3lfs / %.3lfs (%6.3lf%%), Elapsed Time: %lds]\n",
+           (double)k4a_timestamp / 1000000.0,
+           (double)(k4a_timestamp - start_timestamp_usec) / 1000000.0,
+           (double)(end_timestamp_usec - start_timestamp_usec) / 1000000,
+           (double)(k4a_timestamp - start_timestamp_usec) / (double)(end_timestamp_usec - start_timestamp_usec) * 100,
+           time(NULL) - processing_start_time);
 
     returnCode = 0;
 
@@ -367,10 +371,6 @@ Exit:
     if (playback != NULL)
     {
         k4a_playback_close(playback);
-    }
-    if (capture != NULL)
-    {
-        k4a_capture_release(capture);
     }
     return returnCode;
 }
