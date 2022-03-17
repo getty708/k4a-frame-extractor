@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 
 k4a_playback_t playback = NULL;
 k4a_capture_t capture = NULL;
-k4a_transformation_t transformation = NULL;
+// k4a_transformation_t transformation = NULL;
 
 // FIXME: Rename function that include ``ADLTagger''.
 static std::string get_output_path(std::string output_dir, const struct timeval *tv, std::string ext = ".jpg")
@@ -155,7 +155,8 @@ ExitD:
 }
 
 // Extract frame at a given timestamp [us] and save file.
-static uint64_t extract_and_write_depth_frame_color_view(const struct timeval *base_tv = { 0 },
+static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t transformation,
+                                                         const struct timeval *base_tv = { 0 },
                                                          std::string output_dir = "outputs")
 {
     k4a_image_t depth_image = NULL;
@@ -166,6 +167,7 @@ static uint64_t extract_and_write_depth_frame_color_view(const struct timeval *b
     int color_image_width_pixels, color_image_height_pixels;
     k4a_image_t transformed_depth_image = NULL;
     std::string path;
+    // k4a_transformation_t transformation = NULL;
 
     // Fetch frame
     depth_image = k4a_capture_get_depth_image(capture);
@@ -228,6 +230,69 @@ ExitDCV:
     return depth_ts;
 }
 
+uint64_t process_single_capture(const struct timeval *base_tv, const std::string output_dir)
+{
+    k4a_result_t result;
+    k4a_stream_result_t stream_result;
+    k4a_calibration_t calibration;
+    k4a_transformation_t transformation = NULL;
+
+    uint64_t k4a_timestamp = 0, k4a_timestamp_ = 0;
+
+    stream_result = k4a_playback_get_next_capture(playback, &capture);
+    if (stream_result == K4A_STREAM_RESULT_EOF)
+    {
+        printf("Reached to EOF!!\n");
+        return 1;
+    }
+    else if (stream_result != K4A_STREAM_RESULT_SUCCEEDED || capture == NULL)
+    {
+        printf("Failed to fetch frame\n");
+        return 1;
+    }
+
+    if (K4A_RESULT_SUCCEEDED != k4a_playback_get_calibration(playback, &calibration))
+    {
+        printf("Failed to get calibration\n");
+        return 1;
+    }
+    // DEBUG: -
+    // printf("------\n");
+    // print_k4a_calibration_t(&calibration);
+    // printf("\n");
+
+    k4a_timestamp_ = extract_and_write_color_frame(base_tv, output_dir);
+    if (k4a_timestamp_ > k4a_timestamp)
+    {
+        k4a_timestamp = k4a_timestamp_;
+    }
+
+    k4a_timestamp_ = extract_and_write_depth_frame(base_tv, output_dir);
+    if (k4a_timestamp_ > k4a_timestamp)
+    {
+        k4a_timestamp = k4a_timestamp_;
+    }
+
+    transformation = k4a_transformation_create(&calibration);
+    k4a_timestamp_ = extract_and_write_depth_frame_color_view(transformation, base_tv, output_dir);
+    if (k4a_timestamp_ > k4a_timestamp)
+    {
+        k4a_timestamp = k4a_timestamp_;
+    }
+
+    // Clean ups
+    // k4a_capture_release(capture);
+    if (capture != NULL)
+    {
+        k4a_capture_release(capture);
+    }
+    if (transformation != NULL)
+    {
+        k4a_transformation_destroy(transformation);
+    }
+    return k4a_timestamp;
+}
+
 // Timestamp in milliseconds. Defaults to 1 sec as the first couple frames don't contain color
 static int playback_cmd_handler(char *input_path,
                                 std::string base_datetime_str = "2020-01-01_00:00:00",
@@ -236,15 +301,11 @@ static int playback_cmd_handler(char *input_path,
                                 std::string debug = "")
 {
     int returnCode = 1;
-    k4a_calibration_t calibration;
-    // k4a_transformation_t transformation = NULL;
-    // k4a_capture_t capture = NULL;
 
     k4a_result_t result;
     k4a_stream_result_t stream_result;
-    uint64_t recording_length_usec;
-    uint64_t start_timestamp_usec, end_timestamp_usec;
-    uint64_t k4a_timestamp = 0, k4a_timestamp_ = 0;
+    uint64_t recording_length_usec, start_timestamp_usec, end_timestamp_usec, k4a_timestamp = 0;
+    // uint64_t k4a_timestamp = 0;
     struct timeval base_tv;
     long cnt = 0;
     time_t processing_start_time;
@@ -298,56 +359,7 @@ static int playback_cmd_handler(char *input_path,
     processing_start_time = time(NULL);
     while (k4a_timestamp < end_timestamp_usec)
     {
-        if (capture != NULL)
-        {
-            k4a_capture_release(capture);
-        }
-        if (transformation != NULL)
-        {
-            k4a_transformation_destroy(transformation);
-        }
-
-        stream_result = k4a_playback_get_next_capture(playback, &capture);
-        if (stream_result == K4A_STREAM_RESULT_EOF)
-        {
-            printf("Reached to EOF!!\n");
-            break;
-        }
-        else if (stream_result != K4A_STREAM_RESULT_SUCCEEDED || capture == NULL)
-        {
-            printf("Failed to fetch frame\n");
-            continue;
-        }
-
-        if (K4A_RESULT_SUCCEEDED != k4a_playback_get_calibration(playback, &calibration))
-        {
-            printf("Failed to get calibration\n");
-            continue;
-        }
-        // DEBUG: -
-        // printf("------\n");
-        // print_k4a_calibration_t(&calibration);
-        // printf("\n");
-
-        transformation = k4a_transformation_create(&calibration);
-
-        k4a_timestamp_ = extract_and_write_color_frame(&base_tv, output_dir);
-        if (k4a_timestamp_ > k4a_timestamp)
-        {
-            k4a_timestamp = k4a_timestamp_;
-        }
-
-        k4a_timestamp_ = extract_and_write_depth_frame(&base_tv, output_dir);
-        if (k4a_timestamp_ > k4a_timestamp)
-        {
-            k4a_timestamp = k4a_timestamp_;
-        }
-
-        k4a_timestamp_ = extract_and_write_depth_frame_color_view(&base_tv, output_dir);
-        if (k4a_timestamp_ > k4a_timestamp)
-        {
-            k4a_timestamp = k4a_timestamp_;
-        }
+        k4a_timestamp = process_single_capture(&base_tv, output_dir);
 
         cnt++;
         if (cnt % 100 == 0)
@@ -373,10 +385,10 @@ Exit:
     {
         k4a_capture_release(capture);
     }
-    if (transformation != NULL)
-    {
-        k4a_transformation_destroy(transformation);
-    }
+    // if (transformation != NULL)
+    // {
+    //     k4a_transformation_destroy(transformation);
+    // }
     return returnCode;
 }
 
