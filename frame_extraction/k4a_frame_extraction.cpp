@@ -191,10 +191,6 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
                                                  &transformed_depth_image))
     {
         printf("Failed to create transformed depth image @extract_and_write_depth_frame_color_view()\n");
-        // k4a_image_release(depth_image);
-        // k4a_image_release(color_image);
-        // k4a_image_release(transformed_depth_image);
-        // return depth_ts;
         depth_ts = 0;
         goto ExitDepth2;
     }
@@ -203,10 +199,6 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
     {
         printf("Failed to transform depth to color @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
-        // k4a_image_release(depth_image);
-        // k4a_image_release(color_image);
-        // k4a_image_release(transformed_depth_image);
-        // return depth_ts;
         goto ExitDepth2;
     }
 
@@ -365,7 +357,7 @@ static int playback_cmd_handler(char *input_path,
                    time(NULL) - processing_start_time);
         }
     }
-    printf("Finish!\n");
+    printf("--- Finish! ---\n");
     printf("TIME:  %.3lfs [Complete: %.3lfs / %.3lfs (%6.3lf%%), Elapsed Time: %lds]\n",
            (double)k4a_timestamp / 1000000.0,
            (double)(k4a_timestamp - start_timestamp_usec) / 1000000.0,
