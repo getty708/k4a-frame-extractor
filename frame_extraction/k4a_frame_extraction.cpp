@@ -1,6 +1,3 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
-
 #include <k4a/k4a.h>
 #include <k4arecord/playback.h>
 #include <string>
@@ -11,7 +8,6 @@ namespace fs = std::filesystem;
 
 k4a_playback_t playback = NULL;
 k4a_capture_t capture = NULL;
-// k4a_transformation_t transformation = NULL;
 
 // FIXME: Rename function that include ``ADLTagger''.
 static std::string get_output_path(std::string output_dir, const struct timeval *tv, std::string ext = ".jpg")
@@ -51,7 +47,6 @@ static std::string get_output_path(std::string output_dir, const struct timeval 
     return dir + "/" + fname;
 }
 
-// Extract frame at a given timestamp [us] and save file.
 static uint64_t extract_and_write_color_frame(const struct timeval *base_tv = { 0 }, std::string output_dir = "outputs")
 {
     // int return_code = 1;
@@ -60,7 +55,6 @@ static uint64_t extract_and_write_color_frame(const struct timeval *base_tv = { 
     uint64_t color_ts = 0;
     timeval_delta tvd;
     struct timeval color_tv;
-    // std::string dir;
     std::string path;
 
     color_image = k4a_capture_get_color_image(capture);
@@ -94,7 +88,6 @@ static uint64_t extract_and_write_color_frame(const struct timeval *base_tv = { 
         goto ExitC;
     }
 
-    // Compute color point cloud by warping depth image into color camera geometry
     path = get_output_path(output_dir + "/color", &color_tv);
     if (write_k4a_color_image(uncompressed_color_image, path.c_str()) != 0)
     {
@@ -125,28 +118,24 @@ static uint64_t extract_and_write_depth_frame(const struct timeval *base_tv = { 
     struct timeval depth_tv;
     std::string path;
 
-    // Fetch frame
     depth_image = k4a_capture_get_depth_image(capture);
     if (depth_image == 0)
     {
         printf("Failed to get depth image from capture @extract_and_write_depth_frame()\n");
         depth_ts = 0;
-        goto ExitD;
+        k4a_image_release(depth_image);
     }
     depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
     to_timeval_delta(depth_ts, &tvd, true);
     add_timeval(base_tv, &tvd, &depth_tv);
 
-    // Compute color point cloud by warping depth image into color camera geometry
     path = get_output_path(output_dir + "/depth", &depth_tv, ".png");
     if (write_k4a_depth_image(depth_image, path.c_str()) != 0)
     {
         printf("Failed to transform depth to color @extract_and_write_depth_frame()\n");
         depth_ts = 0;
-        goto ExitD;
     }
 
-ExitD:
     if (depth_image != NULL)
     {
         k4a_image_release(depth_image);
@@ -161,13 +150,12 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
 {
     k4a_image_t depth_image = NULL;
     k4a_image_t color_image = NULL;
+    k4a_image_t transformed_depth_image = NULL;
     uint64_t depth_ts = 0;
     timeval_delta tvd;
     struct timeval depth_tv;
     int color_image_width_pixels, color_image_height_pixels;
-    k4a_image_t transformed_depth_image = NULL;
     std::string path;
-    // k4a_transformation_t transformation = NULL;
 
     // Fetch frame
     depth_image = k4a_capture_get_depth_image(capture);
@@ -175,7 +163,8 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
     {
         printf("Failed to get depth image from capture @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
-        goto ExitDCV;
+        k4a_image_release(depth_image);
+        return depth_ts;
     }
     depth_ts = k4a_image_get_device_timestamp_usec(depth_image);
     to_timeval_delta(depth_ts, &tvd, true);
@@ -186,7 +175,9 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
     {
         printf("Failed to get color image from capture @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
-        goto ExitDCV;
+        k4a_image_release(depth_image);
+        k4a_image_release(color_image);
+        return depth_ts;
     }
 
     // transform depth image into color camera geometry
@@ -199,14 +190,20 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
                                                  &transformed_depth_image))
     {
         printf("Failed to create transformed depth image @extract_and_write_depth_frame_color_view()\n");
-        goto ExitDCV;
+        k4a_image_release(depth_image);
+        k4a_image_release(color_image);
+        k4a_image_release(transformed_depth_image);
+        return depth_ts;
     }
     if (K4A_RESULT_SUCCEEDED !=
         k4a_transformation_depth_image_to_color_camera(transformation, depth_image, transformed_depth_image))
     {
         printf("Failed to transform depth to color @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
-        goto ExitDCV;
+        k4a_image_release(depth_image);
+        k4a_image_release(color_image);
+        k4a_image_release(transformed_depth_image);
+        return depth_ts;
     }
 
     // Compute color point cloud by warping depth image into color camera geometry
@@ -215,10 +212,8 @@ static uint64_t extract_and_write_depth_frame_color_view(k4a_transformation_t tr
     {
         printf("Failed to write depth frame (color view) @extract_and_write_depth_frame_color_view()\n");
         depth_ts = 0;
-        goto ExitDCV;
     }
 
-ExitDCV:
     if (depth_image != NULL)
     {
         k4a_image_release(depth_image);
@@ -226,6 +221,10 @@ ExitDCV:
     if (color_image != NULL)
     {
         k4a_image_release(color_image);
+    }
+    if (transformed_depth_image != NULL)
+    {
+        k4a_image_release(transformed_depth_image);
     }
     return depth_ts;
 }
@@ -256,10 +255,6 @@ uint64_t process_single_capture(const struct timeval *base_tv, const std::string
         printf("Failed to get calibration\n");
         return 1;
     }
-    // DEBUG: -
-    // printf("------\n");
-    // print_k4a_calibration_t(&calibration);
-    // printf("\n");
 
     k4a_timestamp_ = extract_and_write_color_frame(base_tv, output_dir);
     if (k4a_timestamp_ > k4a_timestamp)
@@ -281,7 +276,6 @@ uint64_t process_single_capture(const struct timeval *base_tv, const std::string
     }
 
     // Clean ups
-    // k4a_capture_release(capture);
     if (capture != NULL)
     {
         k4a_capture_release(capture);
@@ -349,13 +343,6 @@ static int playback_cmd_handler(char *input_path,
         goto Exit;
     }
 
-    // // Get calibration variables.
-    // if (K4A_RESULT_SUCCEEDED != k4a_playback_get_calibration(playback, &calibration))
-    // {
-    //     printf("Failed to get calibration\n");
-    // }
-    // print_k4a_calibration_t(&calibration);
-
     processing_start_time = time(NULL);
     while (k4a_timestamp < end_timestamp_usec)
     {
@@ -385,10 +372,6 @@ Exit:
     {
         k4a_capture_release(capture);
     }
-    // if (transformation != NULL)
-    // {
-    //     k4a_transformation_destroy(transformation);
-    // }
     return returnCode;
 }
 
