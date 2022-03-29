@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "k4a-frame-extractor"
+version = "0.1.0"
+description = "Extract RGB frames and skeleton data from kinect."
+authors = ["Yoshimura Naoya <yoshimura708x@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1.22.3"
+pandas = "^1.4.1"
+matplotlib = "^3.5.1"
+seaborn = "^0.11.2"
+tqdm = "^4.63.1"
+ipywidgets = "^7.7.0"
+
+[tool.poetry.dev-dependencies]
+ipykernel = "^6.9.2"
+jupyterlab = "^3.3.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
