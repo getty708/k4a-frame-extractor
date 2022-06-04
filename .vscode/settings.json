@@ -4,7 +4,7 @@
     "clang-format.executable": "/usr/bin/clang-format-6.0",
     "C_Cpp.updateChannel": "Insiders",
     "workbench.editor.enablePreview": false,
-    "window.zoomLevel": -1,
+    "window.zoomLevel": 0,
     "[cpp]": {
         "editor.defaultFormatter": "ms-vscode.cpptools"
     },
