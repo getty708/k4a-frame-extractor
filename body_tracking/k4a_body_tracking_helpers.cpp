@@ -14,11 +14,11 @@ std::ofstream ostrm;
 
 int init_output_file_stream()
 {
-    const char *fname = getenv("K4ABT_OUTPUT_DIR");
+    const char *fname = getenv("K4ABT_OUTPUT_PATH");
     if (fname == NULL)
     {
 
-        printf("ERROR: env variable `K4ABT_OUTPUT_DIR` is not defined\n");
+        printf("ERROR: env variable `K4ABT_OUTPUT_PATH` is not defined\n");
         return 1;
     }
 
