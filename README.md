@@ -76,3 +76,8 @@ k4a_frame_extaction <filename.mkv> [datetime: YYYY-mm-dd_HH:MM:SS.fff] \
 We follow the coding style of [Azure-Kinect-Sensor-SDK](https://github.com/getty708/Azure-Kinect-Sensor-SDK/blob/develop/CONTRIBUTING.md#style-guidelines).
 
 Style formatting is enforced as part of check in criteria using [.clang-format](https://github.com/getty708/Azure-Kinect-Sensor-SDK/blob/develop/.clang-format).
+
+
+## Note
+
+Use `bt_offline_processor` instead of `body_tracking`.
